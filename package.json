@@ -1,0 +1,27 @@
+{
+  "name": "brainlift-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "cf-typegen": "wrangler types",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@cloudflare/workers-oauth-provider": "^0.0.5",
+    "@modelcontextprotocol/sdk": "1.13.1",
+    "agents": "^0.0.100",
+    "hono": "^4.6.3",
+    "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@types/node": "^24.1.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.1",
+    "wrangler": "^4.26.0"
+  }
+}
