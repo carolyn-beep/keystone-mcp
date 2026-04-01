@@ -100,7 +100,10 @@ export function formatStatus(result: StatusResponse): string {
     }
   }
 
-  if (!isComplete && result.retryAfter > 0) {
+  if (isComplete) {
+    lines.push('');
+    lines.push('Next: Read the per-DOK feedback (dok=1 through dok=4), use it to improve your brainlift, then submit the revised version with grade_brainlift. You will get a new slug -- editing existing brainlifts is coming soon.');
+  } else if (result.retryAfter > 0) {
     lines.push('');
     lines.push(`Grading still in progress. Sleep ${result.retryAfter} seconds (use bash sleep ${result.retryAfter}), then re-poll with statusOnly=true. Do not ask the user to wait -- handle this autonomously.`);
   }
