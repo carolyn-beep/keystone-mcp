@@ -113,6 +113,18 @@ async function syncLocalhostRedirectUri(request: Request, env: Env): Promise<voi
   await kv.put(`client:${clientId}`, JSON.stringify(clientInfo));
 }
 
+// Combined handler: SSE transport (GET, Claude Code) + Streamable HTTP (POST, Perplexity)
+const sseHandler = BrainliftMCP.serveSSE('/sse');
+const streamableHandler = BrainliftMCP.serve('/sse');
+const mcpHandler = {
+  fetch: (request: Request, env: Env, ctx: ExecutionContext) => {
+    if (request.method === 'POST') {
+      return streamableHandler.fetch(request, env, ctx);
+    }
+    return sseHandler.fetch(request, env, ctx);
+  },
+};
+
 export default {
   fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
     const url = new URL(request.url);
@@ -140,7 +152,7 @@ export default {
     await syncLocalhostRedirectUri(request, env);
 
     const provider = new OAuthProvider({
-      apiHandler: BrainliftMCP.mount('/sse') as any,
+      apiHandler: mcpHandler as any,
       apiRoute: '/sse',
       authorizeEndpoint: '/authorize',
       clientRegistrationEndpoint: '/register',
