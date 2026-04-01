@@ -28,7 +28,7 @@
     "enabled": true
   },
   "vars": {
-    "DOK1GRADER_BASE_URL": "https://brainlift-platform-staging.onrender.com"
+    "DOK1GRADER_BASE_URL": "https://brainlift-platform.onrender.com"
   },
   "dev": {
     "port": 8787
