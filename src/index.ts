@@ -11,6 +11,9 @@ import { McpAgent } from 'agents/mcp';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { GoogleHandler } from './google-handler';
 import { registerGetTemplate } from './tools/get-template';
+import { registerGradeBrainlift } from './tools/grade-brainlift';
+import { registerListBrainlifts } from './tools/list-brainlifts';
+import { registerGetBrainliftAssessment } from './tools/get-brainlift-assessment';
 import type { Env, Props } from './types/env';
 
 const BRAINLIFT_MCP_INSTRUCTIONS = `
@@ -48,6 +51,9 @@ export class BrainliftMCP extends McpAgent<Env, Record<string, never>, Props> {
 
   async init(): Promise<void> {
     registerGetTemplate(this.server, this.env, this.props);
+    registerGradeBrainlift(this.server, this.env, this.props);
+    registerListBrainlifts(this.server, this.env, this.props);
+    registerGetBrainliftAssessment(this.server, this.env, this.props);
   }
 }
 
