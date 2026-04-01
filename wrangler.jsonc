@@ -21,14 +21,14 @@
   "kv_namespaces": [
     {
       "binding": "BRAINLIFT_MCP_OAUTH_KV",
-      "id": "placeholder-create-via-wrangler-kv-namespace-create"
+      "id": "6d84a93d36aa4bbba0f7162afb07d035"
     }
   ],
   "observability": {
     "enabled": true
   },
   "vars": {
-    "DOK1GRADER_BASE_URL": "https://brainlift-platform.onrender.com"
+    "DOK1GRADER_BASE_URL": "https://brainliftcentral.com"
   },
   "dev": {
     "port": 8787
