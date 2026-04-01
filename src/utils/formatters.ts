@@ -19,13 +19,14 @@ export function formatGradeResponse(result: GradeResponse): string {
   return [
     `Brainlift created with slug: ${result.slug}`,
     '',
-    'Grading has started. Use get_brainlift_assessment with this slug to check results.',
-    `First results should be available in ~${result.retryAfter} seconds.`,
+    'Grading has started. You MUST wait and poll for results autonomously -- do not ask the user to check back later.',
     '',
-    'Recommended workflow:',
-    '1. Call get_brainlift_assessment with statusOnly=true to check progress',
-    '2. Wait ~30 seconds between polls',
-    '3. Once complete, call with dok=1 through dok=4 to read per-level feedback',
+    'Follow this workflow:',
+    `1. Wait ${result.retryAfter} seconds (use bash sleep ${result.retryAfter} or equivalent)`,
+    '2. Call get_brainlift_assessment with statusOnly=true and dok=1 to check progress',
+    '3. If status is not "complete", sleep again for the retryAfter seconds in the response, then re-poll',
+    '4. Once complete, call get_brainlift_assessment with dok=1 through dok=4 to read per-level feedback',
+    '5. Present the full assessment results to the user',
   ].join('\n');
 }
 
@@ -101,7 +102,7 @@ export function formatStatus(result: StatusResponse): string {
 
   if (!isComplete && result.retryAfter > 0) {
     lines.push('');
-    lines.push(`Check again in ${result.retryAfter} seconds.`);
+    lines.push(`Grading still in progress. Sleep ${result.retryAfter} seconds (use bash sleep ${result.retryAfter}), then re-poll with statusOnly=true. Do not ask the user to wait -- handle this autonomously.`);
   }
 
   return lines.join('\n');
@@ -300,6 +301,61 @@ export function formatAssessment(
     default:
       return `Unknown DOK level: ${dok}`;
   }
+}
+
+// ── Error guidance ──
+
+/**
+ * Returns actionable guidance for an agent based on the error context.
+ * Parses HTTP status codes from DOK1Grader API errors.
+ */
+export function formatErrorGuidance(message: string, tool: 'get_template' | 'grade_brainlift' | 'list_brainlifts' | 'get_brainlift_assessment'): string {
+  const status = message.match(/API error: (\d{3})/)?.[1];
+
+  // Auth errors — same guidance for all tools
+  if (status === '401') {
+    return 'The service API key is invalid or missing. This is a server configuration issue, not something you can fix. Try again later or report the issue.';
+  }
+
+  if (status === '429') {
+    const retryMatch = message.match(/retry-after[:\s]*(\d+)/i);
+    const wait = retryMatch ? retryMatch[1] : '60';
+    return `Rate limit exceeded. Wait ${wait} seconds before trying again.`;
+  }
+
+  // Tool-specific 400 guidance
+  if (status === '400') {
+    switch (tool) {
+      case 'grade_brainlift':
+        return 'This usually means the markdown format is wrong or no DOK1 facts could be parsed. Call get_template to see the exact required format — structural mistakes silently drop content.';
+      case 'get_brainlift_assessment':
+        return 'Check your parameters: dok must be 1-4, page must be >= 1, pageSize must be 1-50.';
+      default:
+        return 'The request was malformed. Check your parameters and try again.';
+    }
+  }
+
+  // 404 — slug not found
+  if (status === '404') {
+    switch (tool) {
+      case 'get_brainlift_assessment':
+        return 'Brainlift not found. Check the slug is correct — use list_brainlifts to see your available brainlifts and their slugs.';
+      default:
+        return 'Resource not found. Use list_brainlifts to see your available brainlifts.';
+    }
+  }
+
+  // 500+ — server error
+  if (status && parseInt(status) >= 500) {
+    return 'The grading server encountered an internal error. Wait a minute and try again. If the issue persists, the server may be down.';
+  }
+
+  // Network/connection errors (no status code)
+  if (message.includes('fetch failed') || message.includes('ECONNREFUSED') || message.includes('network')) {
+    return 'Cannot reach the grading server. It may be starting up or temporarily unavailable. Wait a minute and try again.';
+  }
+
+  return 'An unexpected error occurred. Try again later.';
 }
 
 // ── Helpers ──

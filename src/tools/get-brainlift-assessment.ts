@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { DOK1GraderClient } from '../utils/dok1grader-client';
-import { formatStatus, formatAssessment } from '../utils/formatters';
+import { formatStatus, formatAssessment, formatErrorGuidance } from '../utils/formatters';
 
 interface ToolEnv {
   DOK1GRADER_BASE_URL: string;
@@ -88,7 +88,7 @@ export async function handleGetBrainliftAssessment(
       content: [
         {
           type: 'text',
-          text: `Failed to get assessment: ${message}. Please try again later.`,
+          text: `Failed to get assessment: ${message}\n\n${formatErrorGuidance(message, 'get_brainlift_assessment')}`,
         },
       ],
       isError: true,

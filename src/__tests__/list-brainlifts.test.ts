@@ -19,6 +19,7 @@ vi.mock('../utils/dok1grader-client', () => ({
 
 vi.mock('../utils/formatters', () => ({
   formatBrainliftList: vi.fn((result: any) => `${result.brainlifts.length} brainlifts`),
+  formatErrorGuidance: vi.fn(() => 'Try again later.'),
 }));
 
 import { DOK1GraderClient } from '../utils/dok1grader-client';

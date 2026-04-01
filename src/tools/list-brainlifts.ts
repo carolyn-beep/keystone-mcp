@@ -7,7 +7,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { DOK1GraderClient } from '../utils/dok1grader-client';
-import { formatBrainliftList } from '../utils/formatters';
+import { formatBrainliftList, formatErrorGuidance } from '../utils/formatters';
 
 interface ToolEnv {
   DOK1GRADER_BASE_URL: string;
@@ -63,7 +63,7 @@ export async function handleListBrainlifts(
       content: [
         {
           type: 'text',
-          text: `Failed to list brainlifts: ${message}. Please try again later.`,
+          text: `Failed to list brainlifts: ${message}\n\n${formatErrorGuidance(message, 'list_brainlifts')}`,
         },
       ],
       isError: true,

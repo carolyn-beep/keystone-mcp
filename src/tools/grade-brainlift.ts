@@ -8,7 +8,7 @@
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { DOK1GraderClient } from '../utils/dok1grader-client';
-import { formatGradeResponse } from '../utils/formatters';
+import { formatGradeResponse, formatErrorGuidance } from '../utils/formatters';
 
 interface ToolEnv {
   DOK1GRADER_BASE_URL: string;
@@ -64,7 +64,7 @@ export async function handleGradeBrainlift(
       content: [
         {
           type: 'text',
-          text: `Failed to submit brainlift: ${message}. Please try again later.`,
+          text: `Failed to submit brainlift: ${message}\n\n${formatErrorGuidance(message, 'grade_brainlift')}`,
         },
       ],
       isError: true,

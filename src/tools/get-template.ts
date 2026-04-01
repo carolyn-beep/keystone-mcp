@@ -7,6 +7,7 @@
 
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { DOK1GraderClient } from '../utils/dok1grader-client';
+import { formatErrorGuidance } from '../utils/formatters';
 
 interface ToolEnv {
   DOK1GRADER_BASE_URL: string;
@@ -62,7 +63,7 @@ export async function handleGetTemplate(
       content: [
         {
           type: 'text',
-          text: `Failed to fetch template: ${message}. Please try again later.`,
+          text: `Failed to fetch template: ${message}\n\n${formatErrorGuidance(message, 'get_template')}`,
         },
       ],
       isError: true,

@@ -19,6 +19,7 @@ vi.mock('../utils/dok1grader-client', () => ({
 
 vi.mock('../utils/formatters', () => ({
   formatGradeResponse: vi.fn((result: any) => `Slug: ${result.slug}, retry: ${result.retryAfter}s`),
+  formatErrorGuidance: vi.fn(() => 'Try again later.'),
 }));
 
 import { DOK1GraderClient } from '../utils/dok1grader-client';
