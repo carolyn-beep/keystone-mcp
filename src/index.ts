@@ -115,6 +115,25 @@ async function syncLocalhostRedirectUri(request: Request, env: Env): Promise<voi
 
 export default {
   fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
+    const url = new URL(request.url);
+
+    // RFC 9728: OAuth Protected Resource Metadata.
+    // Some MCP clients (Perplexity) request this under /sse/, which the
+    // OAuthProvider treats as a protected API call and rejects with 401.
+    // Intercept it and return the discovery document publicly.
+    if (url.pathname === '/sse/.well-known/oauth-protected-resource' ||
+        url.pathname === '/.well-known/oauth-protected-resource') {
+      const baseUrl = `${url.protocol}//${url.host}`;
+      return new Response(JSON.stringify({
+        resource: baseUrl,
+        authorization_servers: [baseUrl],
+        bearer_methods_supported: ['header'],
+        scopes_supported: [],
+      }), {
+        headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' },
+      });
+    }
+
     const adaptedEnv = Object.assign(new OAuthKVAdapter(env), env);
 
     // Patch stale localhost redirect URIs before OAuthProvider validates them
