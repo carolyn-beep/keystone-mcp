@@ -70,9 +70,55 @@ class OAuthKVAdapter {
   }
 }
 
+/**
+ * MCP clients use ephemeral localhost ports. If a client was registered with
+ * localhost:54929 and reconnects on localhost:54932, the OAuthProvider rejects
+ * the redirect_uri. This middleware updates the stored registration to match
+ * the new port so users never see an "Invalid redirect URI" error.
+ */
+async function syncLocalhostRedirectUri(request: Request, env: Env): Promise<void> {
+  const url = new URL(request.url);
+  if (url.pathname !== '/authorize') return;
+
+  const clientId = url.searchParams.get('client_id');
+  const redirectUri = url.searchParams.get('redirect_uri');
+  if (!clientId || !redirectUri) return;
+
+  // Only patch localhost redirect URIs
+  let parsed: URL;
+  try { parsed = new URL(redirectUri); } catch { return; }
+  if (parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') return;
+
+  const kv = env.BRAINLIFT_MCP_OAUTH_KV;
+  const stored = await kv.get(`client:${clientId}`);
+  if (!stored) return;
+
+  const clientInfo = JSON.parse(stored);
+  const currentUris: string[] = clientInfo.redirectUris || [];
+
+  // If the exact URI is already registered, nothing to do
+  if (currentUris.includes(redirectUri)) return;
+
+  // Replace any existing localhost URIs with the new one
+  clientInfo.redirectUris = [
+    ...currentUris.filter((uri: string) => {
+      try {
+        const u = new URL(uri);
+        return u.hostname !== 'localhost' && u.hostname !== '127.0.0.1';
+      } catch { return true; }
+    }),
+    redirectUri,
+  ];
+
+  await kv.put(`client:${clientId}`, JSON.stringify(clientInfo));
+}
+
 export default {
-  fetch: (request: Request, env: Env, ctx: ExecutionContext) => {
+  fetch: async (request: Request, env: Env, ctx: ExecutionContext) => {
     const adaptedEnv = Object.assign(new OAuthKVAdapter(env), env);
+
+    // Patch stale localhost redirect URIs before OAuthProvider validates them
+    await syncLocalhostRedirectUri(request, env);
 
     const provider = new OAuthProvider({
       apiHandler: BrainliftMCP.mount('/sse') as any,
