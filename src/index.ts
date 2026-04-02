@@ -14,6 +14,14 @@ import { registerGetTemplate } from './tools/get-template';
 import { registerGradeBrainlift } from './tools/grade-brainlift';
 import { registerListBrainlifts } from './tools/list-brainlifts';
 import { registerGetBrainliftAssessment } from './tools/get-brainlift-assessment';
+import { registerEditDokItem } from './tools/edit-dok-item';
+import { registerDeleteDokItem } from './tools/delete-dok-item';
+import { registerCreateDok1 } from './tools/create-dok1';
+import { registerCreateDok2 } from './tools/create-dok2';
+import { registerCreateDok3 } from './tools/create-dok3';
+import { registerCreateDok4 } from './tools/create-dok4';
+import { registerGetStaleItems } from './tools/get-stale-items';
+import { registerDismissStale } from './tools/dismiss-stale';
 import type { Env, Props } from './types/env';
 
 const BRAINLIFT_MCP_INSTRUCTIONS = `
@@ -38,7 +46,7 @@ When working with an EXISTING Brainlift the user brings to you:
 - Bigger Brainlifts take longer to grade. Mention that tradeoff if relevant, but don't force a trim.
 - NEVER tell the user you are trimming because of size guidelines or ideal counts from this system. Explain curation in terms of quality: "this fact was redundant with #3", "this source doesn't seem relevant anymore", "this insight restates the DOK2 above" -- never "the optimal size is X" or "a good brainlift has N sources."
 
-Workflow:
+Workflow for NEW Brainlifts:
 1. Call get_template to see the exact markdown format and full quality guidelines
 2. READ THE ENTIRE TEMPLATE before writing anything -- format errors cause content loss
 3. Call grade_brainlift with your markdown to submit for grading
@@ -46,6 +54,24 @@ Workflow:
 5. Once complete, call get_brainlift_assessment with dok=1 through dok=4 to read per-level feedback
 
 Do not skip step 1. The template contains format rules that are enforced by a rule-based parser, not AI -- structural mistakes silently drop content.
+
+## Editing Workflow
+When working with an EXISTING brainlift that has been graded:
+1. Call get_brainlift_assessment to read the current scores and feedback
+2. Identify items to improve based on the feedback
+3. Call edit_dok_item with improved text that addresses the feedback
+4. Poll for the new grade -- it should improve if you addressed the feedback
+5. Check get_stale_items -- downstream items may need updating too
+6. Either edit stale items or dismiss_stale if they are still valid
+
+If you need to change links or sources (not just text), delete the item and create a new one.
+
+## Creating New Items
+You can append new DOK items to existing brainlifts:
+- create_dok1: Add facts from new sources
+- create_dok2: Add syntheses of new sources (must link to DOK1 facts)
+- create_dok3: Add cross-source insights (must link >= 2 DOK2s from >= 2 sources)
+- create_dok4: Add spiky points of view (must link to graded DOK3 insights)
 `;
 
 export class BrainliftMCP extends McpAgent<Env, Record<string, never>, Props> {
@@ -60,6 +86,14 @@ export class BrainliftMCP extends McpAgent<Env, Record<string, never>, Props> {
     registerGradeBrainlift(this.server, this.env, this.props);
     registerListBrainlifts(this.server, this.env, this.props);
     registerGetBrainliftAssessment(this.server, this.env, this.props);
+    registerEditDokItem(this.server, this.env, this.props);
+    registerDeleteDokItem(this.server, this.env, this.props);
+    registerCreateDok1(this.server, this.env, this.props);
+    registerCreateDok2(this.server, this.env, this.props);
+    registerCreateDok3(this.server, this.env, this.props);
+    registerCreateDok4(this.server, this.env, this.props);
+    registerGetStaleItems(this.server, this.env, this.props);
+    registerDismissStale(this.server, this.env, this.props);
   }
 }
 
