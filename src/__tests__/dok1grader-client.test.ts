@@ -56,7 +56,7 @@ describe('DOK1GraderClient', () => {
       expect(url).toBe('https://example.com/api/internal/template');
       expect(options.headers['X-Service-Key']).toBe('sk-test-123');
       expect(options.headers['X-User-Email']).toBe('user@example.com');
-      expect(options.headers['X-User-Name']).toBe('Test User');
+      expect(options.headers['X-User-Name']).toBe('Test%20User');
     });
 
     it('uses GET method', async () => {
