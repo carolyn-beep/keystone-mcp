@@ -190,7 +190,7 @@ export class DOK1GraderClient {
     const headers: Record<string, string> = {
       'X-Service-Key': this.serviceKey,
       'X-User-Email': this.userEmail,
-      'X-User-Name': this.userName || this.userEmail.split('@')[0],
+      'X-User-Name': encodeURIComponent(this.userName || this.userEmail.split('@')[0]),
       'Content-Type': 'application/json',
     };
 

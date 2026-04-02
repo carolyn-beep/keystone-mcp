@@ -120,11 +120,14 @@ async function syncLocalhostRedirectUri(request: Request, env: Env): Promise<voi
 }
 
 // Combined handler: SSE transport (GET, Claude Code) + Streamable HTTP (POST, Perplexity)
+// SSE transport:        GET /sse (connect) + POST /sse/message (send)
+// Streamable HTTP:      POST /sse (everything)
 const sseHandler = BrainliftMCP.serveSSE('/sse');
 const streamableHandler = BrainliftMCP.serve('/sse');
 const mcpHandler = {
   fetch: (request: Request, env: Env, ctx: ExecutionContext) => {
-    if (request.method === 'POST') {
+    const url = new URL(request.url);
+    if (request.method === 'POST' && url.pathname === '/sse') {
       return streamableHandler.fetch(request, env, ctx);
     }
     return sseHandler.fetch(request, env, ctx);
