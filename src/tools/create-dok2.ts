@@ -68,13 +68,13 @@ export async function handleCreateDok2(
 export function registerCreateDok2(server: McpServer, env: ToolEnv, props: ToolProps): void {
   server.tool(
     'create_dok2',
-    'Add a new DOK2 summary to an existing brainlift. Triggers DOK2 grading.',
+    'Add a new DOK2 summary to an existing brainlift. Review quality guidelines from get_template first. DOK2 summaries must be YOUR synthesis of what the source says -- not copy-paste or regurgitation. The grader penalizes copy-paste heavily. Triggers async grading. Poll get_brainlift_assessment to check when grading completes.',
     {
       slug: z.string().describe('Brainlift slug'),
       sourceName: z.string().describe('Name of the source being summarized'),
       sourceUrl: z.string().optional().describe('URL of the source'),
-      points: z.array(z.string()).min(1).describe('Summary points (your synthesis, not copy-paste)'),
-      relatedFactIds: z.array(z.number()).min(1).describe('IDs of DOK1 facts this summary draws from'),
+      points: z.array(z.string()).min(1).describe('Summary points -- your synthesis in your own words, not copy-paste from the source'),
+      relatedFactIds: z.array(z.number()).min(1).describe('IDs of DOK1 facts this summary draws from (from get_brainlift_assessment)'),
     },
     async (args) => handleCreateDok2(args, env, props),
   );

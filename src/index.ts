@@ -22,6 +22,8 @@ import { registerCreateDok3 } from './tools/create-dok3';
 import { registerCreateDok4 } from './tools/create-dok4';
 import { registerGetStaleItems } from './tools/get-stale-items';
 import { registerDismissStale } from './tools/dismiss-stale';
+import { registerLinkDok3 } from './tools/link-dok3';
+import { registerLinkDok4 } from './tools/link-dok4';
 import type { Env, Props } from './types/env';
 
 const BRAINLIFT_MCP_INSTRUCTIONS = `
@@ -64,7 +66,7 @@ When working with an EXISTING brainlift that has been graded:
 5. Check get_stale_items -- downstream items may need updating too
 6. Either edit stale items or dismiss_stale if they are still valid
 
-If you need to change links or sources (not just text), delete the item and create a new one.
+If grading feedback says you need more evidence, build new DOK1/DOK2 items first, then use link_dok3 or link_dok4 to attach them to the existing item. This preserves feedback continuity. Only delete and recreate if you need to fundamentally change the item's text and links together.
 
 ## Creating New Items
 You can append new DOK items to existing brainlifts:
@@ -94,6 +96,8 @@ export class BrainliftMCP extends McpAgent<Env, Record<string, never>, Props> {
     registerCreateDok4(this.server, this.env, this.props);
     registerGetStaleItems(this.server, this.env, this.props);
     registerDismissStale(this.server, this.env, this.props);
+    registerLinkDok3(this.server, this.env, this.props);
+    registerLinkDok4(this.server, this.env, this.props);
   }
 }
 

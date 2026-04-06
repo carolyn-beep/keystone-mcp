@@ -57,7 +57,7 @@ export async function handleGetStaleItems(
 export function registerGetStaleItems(server: McpServer, env: ToolEnv, props: ToolProps): void {
   server.tool(
     'get_stale_items',
-    'List all stale items in a brainlift. Stale items have foundations that changed and may need updating.',
+    'List all stale items in a brainlift. An item is "stale" when a foundation item it depends on (lower DOK level) was edited or deleted, meaning its grading may be based on outdated content. Call this after any edit_dok_item or delete_dok_item to see what was affected. For each stale item, decide: use edit_dok_item to update it if the content is affected by the change, or dismiss_stale if it is still valid despite the foundation change.',
     {
       slug: z.string().describe('Brainlift slug'),
     },

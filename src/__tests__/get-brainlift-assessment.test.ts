@@ -77,7 +77,9 @@ describe('get_brainlift_assessment tool handler', () => {
         validProps,
       );
 
-      expect(mockGetAssessment).toHaveBeenCalledWith('my-slug', 1, 1, 20, 'summary');
+      expect(mockGetAssessment).toHaveBeenCalledWith('my-slug', 1, 1, 20, 'summary', {
+        itemId: undefined, sortBy: undefined, order: undefined, status: undefined,
+      });
       expect(mockGetStatus).not.toHaveBeenCalled();
       expect(result.content[0].text).toContain('DOK1');
     });
@@ -93,7 +95,9 @@ describe('get_brainlift_assessment tool handler', () => {
         validProps,
       );
 
-      expect(mockGetAssessment).toHaveBeenCalledWith('s', 3, 1, 20, 'full');
+      expect(mockGetAssessment).toHaveBeenCalledWith('s', 3, 1, 20, 'full', {
+        itemId: undefined, sortBy: undefined, order: undefined, status: undefined,
+      });
     });
 
     it('defaults page=1, pageSize=20, detail=summary', async () => {
@@ -107,7 +111,57 @@ describe('get_brainlift_assessment tool handler', () => {
         validProps,
       );
 
-      expect(mockGetAssessment).toHaveBeenCalledWith('s', 2, 1, 20, 'summary');
+      expect(mockGetAssessment).toHaveBeenCalledWith('s', 2, 1, 20, 'summary', {
+        itemId: undefined, sortBy: undefined, order: undefined, status: undefined,
+      });
+    });
+
+    it('passes itemId filter to getAssessment', async () => {
+      mockGetAssessment.mockResolvedValue({
+        slug: 's', dok: 1, items: [], pagination: {},
+      });
+
+      await handleGetBrainliftAssessment(
+        { slug: 's', dok: 1, itemId: 42 },
+        validEnv,
+        validProps,
+      );
+
+      expect(mockGetAssessment).toHaveBeenCalledWith('s', 1, 1, 20, 'summary', {
+        itemId: 42, sortBy: undefined, order: undefined, status: undefined,
+      });
+    });
+
+    it('passes sortBy, order, and status filters', async () => {
+      mockGetAssessment.mockResolvedValue({
+        slug: 's', dok: 1, items: [], pagination: {},
+      });
+
+      await handleGetBrainliftAssessment(
+        { slug: 's', dok: 1, sortBy: 'score', order: 'asc', status: 'regrading' },
+        validEnv,
+        validProps,
+      );
+
+      expect(mockGetAssessment).toHaveBeenCalledWith('s', 1, 1, 20, 'summary', {
+        itemId: undefined, sortBy: 'score', order: 'asc', status: 'regrading',
+      });
+    });
+
+    it('passes all filter params together with pagination', async () => {
+      mockGetAssessment.mockResolvedValue({
+        slug: 's', dok: 2, items: [], pagination: {},
+      });
+
+      await handleGetBrainliftAssessment(
+        { slug: 's', dok: 2, page: 3, pageSize: 10, detail: 'full', itemId: 99, sortBy: 'updatedAt', order: 'desc', status: 'graded' },
+        validEnv,
+        validProps,
+      );
+
+      expect(mockGetAssessment).toHaveBeenCalledWith('s', 2, 3, 10, 'full', {
+        itemId: 99, sortBy: 'updatedAt', order: 'desc', status: 'graded',
+      });
     });
   });
 
