@@ -16,6 +16,7 @@ import type {
   DeleteResultResponse,
   CreateResponse,
   StaleResponse,
+  LinkResponse,
 } from './dok1grader-client';
 
 // ── Grade response ──
@@ -134,7 +135,11 @@ export function formatAssessmentDOK1(result: {
 
   for (let i = 0; i < result.items.length; i++) {
     const item = result.items[i];
-    lines.push(`${i + 1}. [Score: ${item.score}/5] "${item.fact}"`);
+    if (item.gradingStatus === 'regrading' || item.gradingStatus === 'grading') {
+      lines.push(`${i + 1}. [ID: ${item.id}] [REGRADING] "${item.fact}"`);
+    } else {
+      lines.push(`${i + 1}. [ID: ${item.id}] [Score: ${item.score}/5] "${item.fact}"`);
+    }
     if (item.source) lines.push(`   Source: ${item.source}`);
     if (item.note) lines.push(`   Note: ${item.note}`);
     lines.push('');
@@ -160,7 +165,11 @@ export function formatAssessmentDOK2(result: {
 
   for (let i = 0; i < result.items.length; i++) {
     const item = result.items[i];
-    lines.push(`${i + 1}. [Grade: ${item.grade}/5] ${item.displayTitle}`);
+    if (item.gradingStatus === 'regrading' || item.gradingStatus === 'grading') {
+      lines.push(`${i + 1}. [ID: ${item.id}] [REGRADING] ${item.displayTitle}`);
+    } else {
+      lines.push(`${i + 1}. [ID: ${item.id}] [Grade: ${item.grade}/5] ${item.displayTitle}`);
+    }
     lines.push(`   Source: ${item.sourceName}`);
     if (item.points.length > 0) {
       lines.push(`   Points: ${item.points.join('; ')}`);
@@ -191,7 +200,11 @@ export function formatAssessmentDOK3(
 
   for (let i = 0; i < result.items.length; i++) {
     const item = result.items[i];
-    lines.push(`${i + 1}. [Score: ${item.score}/5] "${item.text}"`);
+    if (item.status === 'grading' || item.status === 'regrading') {
+      lines.push(`${i + 1}. [ID: ${item.id}] [REGRADING] "${item.text}"`);
+    } else {
+      lines.push(`${i + 1}. [ID: ${item.id}] [Score: ${item.score}/5] "${item.text}"`);
+    }
     if (item.linkedSources.length > 0) {
       lines.push(`   Linked Sources: ${item.linkedSources.join(', ')}`);
     }
@@ -242,12 +255,14 @@ export function formatAssessmentDOK4(
   for (let i = 0; i < result.items.length; i++) {
     const item = result.items[i];
 
-    if (item.status === 'rejected') {
-      lines.push(`${i + 1}. [REJECTED] "${item.text}"`);
+    if (item.status === 'grading' || item.status === 'linked') {
+      lines.push(`${i + 1}. [ID: ${item.id}] [REGRADING] "${item.text}"`);
+    } else if (item.status === 'rejected') {
+      lines.push(`${i + 1}. [ID: ${item.id}] [REJECTED] "${item.text}"`);
       if (item.rejectionCategory) lines.push(`   Category: ${item.rejectionCategory}`);
       if (item.rejectionReason) lines.push(`   Reason: ${item.rejectionReason}`);
     } else {
-      lines.push(`${i + 1}. [Score: ${item.score}/5] "${item.text}"`);
+      lines.push(`${i + 1}. [ID: ${item.id}] [Score: ${item.score}/5] "${item.text}"`);
       if (item.rationale) lines.push(`   Rationale: ${item.rationale}`);
       if (item.feedback) lines.push(`   Feedback: ${item.feedback}`);
     }
@@ -336,34 +351,44 @@ export function formatEditResponse(response: EditResponse): string {
 }
 
 export function formatDeletePreview(response: DeletePreviewResponse): string {
-  const { item, impact } = response;
+  const { item, unlinkedItems, staleDok2Ids, staleDok3Ids, staleDok4Ids } = response;
+  const totalStale = staleDok2Ids.length + staleDok3Ids.length + staleDok4Ids.length;
+
   const lines: string[] = [
     `Delete preview for item #${item.id}: "${item.text}"`,
-    item.score !== null ? `Current score: ${item.score}/5` : '',
-    '',
-    'Impact:',
-    `- ${impact.unlinked} item(s) will be unlinked`,
-    `- ${impact.markedStale} item(s) will be marked stale`,
   ];
+  if (item.score !== null) lines.push(`Current score: ${item.score}/5`);
+  lines.push('');
+  lines.push('Impact:');
+  lines.push(`- ${unlinkedItems.length} item(s) will be unlinked`);
+  lines.push(`- ${totalStale} item(s) will be marked stale`);
 
-  if (impact.details.length > 0) {
+  if (unlinkedItems.length > 0) {
     lines.push('');
-    lines.push('Details:');
-    for (const detail of impact.details) {
-      lines.push(`  - ${detail}`);
+    lines.push('Unlinked items:');
+    for (const u of unlinkedItems) {
+      lines.push(`  - DOK${u.dokLevel} #${u.id}: "${u.text}"`);
     }
+  }
+
+  if (totalStale > 0) {
+    lines.push('');
+    lines.push('Items marked stale:');
+    for (const id of staleDok2Ids) lines.push(`  - DOK2 #${id}`);
+    for (const id of staleDok3Ids) lines.push(`  - DOK3 #${id}`);
+    for (const id of staleDok4Ids) lines.push(`  - DOK4 #${id}`);
   }
 
   lines.push('');
   lines.push('Call delete_dok_item again with confirm=true to execute the deletion.');
 
-  return lines.filter(l => l !== '').length > 0 ? lines.join('\n') : lines.join('\n');
+  return lines.join('\n');
 }
 
 export function formatDeleteResult(response: DeleteResultResponse): string {
   return [
     `Deleted successfully.`,
-    `${response.impact.unlinked} item(s) unlinked, ${response.impact.markedStale} item(s) marked stale.`,
+    `${response.impactSummary.unlinked} item(s) unlinked, ${response.impactSummary.markedStale} item(s) marked stale.`,
   ].join('\n');
 }
 
@@ -376,12 +401,21 @@ export function formatCreateResponse(response: CreateResponse, dokLevel: number)
   ].join('\n');
 }
 
+export function formatLinkResponse(response: LinkResponse, dokLevel: number): string {
+  const childLevel = dokLevel - 1;
+  return [
+    `Linked ${response.addedLinks} new DOK${childLevel} item(s) to DOK${dokLevel} #${response.id}.`,
+    `Status: Regrading in progress.`,
+    `Poll get_brainlift_assessment(slug, dok=${dokLevel}, itemId=${response.id}) to check when the new score is ready.`,
+  ].join('\n');
+}
+
 export function formatStaleItems(response: StaleResponse): string {
   const levels = [
-    { key: 'dok1' as const, label: 'DOK1', textKey: 'text' },
-    { key: 'dok2' as const, label: 'DOK2', textKey: 'displayTitle' },
-    { key: 'dok3' as const, label: 'DOK3', textKey: 'text' },
-    { key: 'dok4' as const, label: 'DOK4', textKey: 'text' },
+    { key: 'dok1' as const, label: 'DOK1' },
+    { key: 'dok2' as const, label: 'DOK2' },
+    { key: 'dok3' as const, label: 'DOK3' },
+    { key: 'dok4' as const, label: 'DOK4' },
   ];
 
   const hasAny = levels.some(l => response[l.key].length > 0);
@@ -397,7 +431,7 @@ export function formatStaleItems(response: StaleResponse): string {
 
     lines.push(`${level.label}:`);
     for (const item of items) {
-      const label = (item as any)[level.textKey] || `Item`;
+      const label = item.text || 'Item';
       lines.push(`  #${item.id} "${label}" -- ${item.staleReason}`);
     }
     lines.push('');
@@ -430,7 +464,9 @@ type ToolName =
   | 'create_dok3'
   | 'create_dok4'
   | 'get_stale_items'
-  | 'dismiss_stale';
+  | 'dismiss_stale'
+  | 'link_dok3'
+  | 'link_dok4';
 
 export function formatErrorGuidance(message: string, tool: ToolName): string {
   const status = message.match(/API error: (\d{3})/)?.[1];

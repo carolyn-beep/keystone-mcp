@@ -82,12 +82,15 @@ export interface EditResponse {
 
 export interface DeletePreviewResponse {
   item: { id: number; text: string; score: number | null };
-  impact: { unlinked: number; markedStale: number; details: string[] };
+  unlinkedItems: Array<{ id: number; dokLevel: number; text: string }>;
+  staleDok2Ids: number[];
+  staleDok3Ids: number[];
+  staleDok4Ids: number[];
 }
 
 export interface DeleteResultResponse {
   deleted: true;
-  impact: { unlinked: number; markedStale: number };
+  impactSummary: { unlinked: number; markedStale: number };
 }
 
 export interface CreateResponse {
@@ -97,9 +100,8 @@ export interface CreateResponse {
 
 export interface StaleItem {
   id: number;
-  text?: string;
-  displayTitle?: string;
-  staleReason: string;
+  text: string | null;
+  staleReason: string | null;
 }
 
 export interface StaleResponse {
@@ -111,6 +113,12 @@ export interface StaleResponse {
 
 export interface DismissStaleResponse {
   dismissed: boolean;
+}
+
+export interface LinkResponse {
+  id: number;
+  addedLinks: number;
+  status: string;
 }
 
 export class DOK1GraderClient {
@@ -200,6 +208,12 @@ export class DOK1GraderClient {
     page: number,
     pageSize: number,
     detail: 'summary' | 'full' = 'summary',
+    filters: {
+      itemId?: number;
+      sortBy?: 'id' | 'score' | 'updatedAt';
+      order?: 'asc' | 'desc';
+      status?: string;
+    } = {},
   ): Promise<AssessmentResponse> {
     const params = new URLSearchParams({
       dok: String(dok),
@@ -207,6 +221,11 @@ export class DOK1GraderClient {
       pageSize: String(pageSize),
       detail,
     });
+    if (filters.itemId != null) params.set('itemId', String(filters.itemId));
+    if (filters.sortBy) params.set('sortBy', filters.sortBy);
+    if (filters.order) params.set('order', filters.order);
+    if (filters.status) params.set('status', filters.status);
+
     const response = await this.request(
       'GET',
       `/api/internal/brainlifts/${slug}/assessment?${params.toString()}`,
@@ -259,7 +278,7 @@ export class DOK1GraderClient {
   ): Promise<CreateResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok/dok1`,
+      `/api/internal/brainlifts/${slug}/dok1`,
       data,
     );
     return (await response.json()) as CreateResponse;
@@ -279,7 +298,7 @@ export class DOK1GraderClient {
   ): Promise<CreateResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok/dok2`,
+      `/api/internal/brainlifts/${slug}/dok2`,
       data,
     );
     return (await response.json()) as CreateResponse;
@@ -294,7 +313,7 @@ export class DOK1GraderClient {
   ): Promise<CreateResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok/dok3`,
+      `/api/internal/brainlifts/${slug}/dok3`,
       data,
     );
     return (await response.json()) as CreateResponse;
@@ -309,7 +328,7 @@ export class DOK1GraderClient {
   ): Promise<CreateResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok/dok4`,
+      `/api/internal/brainlifts/${slug}/dok4`,
       data,
     );
     return (await response.json()) as CreateResponse;
@@ -336,10 +355,42 @@ export class DOK1GraderClient {
   ): Promise<DismissStaleResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dismiss-stale`,
-      { dok, itemId },
+      `/api/internal/brainlifts/${slug}/dok/${dok}/items/${itemId}/dismiss-stale`,
     );
     return (await response.json()) as DismissStaleResponse;
+  }
+
+  /**
+   * Add DOK2 summary links to an existing DOK3 insight.
+   */
+  async linkDok3(
+    slug: string,
+    insightId: number,
+    dok2Ids: number[],
+  ): Promise<LinkResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/dok3/${insightId}/links`,
+      { dok2Ids },
+    );
+    return (await response.json()) as LinkResponse;
+  }
+
+  /**
+   * Add DOK3 insight links to an existing DOK4 SPOV.
+   */
+  async linkDok4(
+    slug: string,
+    spovId: number,
+    dok3Ids: number[],
+    newPrimaryDok3Id?: number,
+  ): Promise<LinkResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/dok4/${spovId}/links`,
+      { dok3Ids, ...(newPrimaryDok3Id != null ? { newPrimaryDok3Id } : {}) },
+    );
+    return (await response.json()) as LinkResponse;
   }
 
   /**
