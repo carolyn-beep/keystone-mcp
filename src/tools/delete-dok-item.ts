@@ -67,12 +67,27 @@ export async function handleDeleteDokItem(
 export function registerDeleteDokItem(server: McpServer, env: ToolEnv, props: ToolProps): void {
   server.tool(
     'delete_dok_item',
-    'Delete a DOK item. Returns impact preview showing what will be affected. Call again with confirm=true to execute.',
+    `Delete a DOK item. Deletion is a curation tool -- use it alongside editing to shape a BrainLift toward quality, not just volume.
+
+EDIT vs DELETE -- it depends on context:
+- If the feedback points to fixable text problems (imprecise language, missing connection to purpose), edit.
+- If the problem is structural (wrong source URL, irrelevant source, weak claim that can't be salvaged), delete.
+- A source that has nothing to do with the rest of the BrainLift should be trimmed entirely -- delete its DOK1 facts and DOK2 summaries.
+- Low-scoring items drag down foundation scores for everything built on top. A swollen BrainLift with hundreds of weak facts benefits more from pruning than from editing each one. A small BrainLift might need every item, so edit first.
+- Scores improve not just by making items better, but by removing items that dilute quality. Use get_brainlift_assessment with sortBy=score&order=asc to find the weakest items and assess whether they're worth the effort.
+
+Common workflows:
+- DOK1 has a wrong or broken source URL: delete it, create_dok1 with the correct source.
+- DOK2 is dragging a DOK3 score down: delete the weak DOK2, build a better one, link_dok3 to attach it.
+- DOK3/DOK4 needs stronger foundation: don't delete the DOK3/DOK4 -- prune weak items underneath, build better ones, then link_dok3 or link_dok4 to connect them. This preserves version history and feedback continuity.
+- An entire source is irrelevant: delete all DOK1 facts from that source, then delete the DOK2 summary. The cascade will mark dependent DOK3/DOK4 items stale for review.
+
+First call (confirm=false) returns an impact preview showing what will be affected. Review the cascade, then call again with confirm=true to execute.`,
     {
       slug: z.string().describe('Brainlift slug'),
-      dok: z.number().min(1).max(4).describe('DOK level (1-4)'),
-      itemId: z.number().describe('Item ID to delete'),
-      confirm: z.boolean().default(false).describe('Set true to execute deletion. False returns preview only.'),
+      dok: z.number().min(1).max(4).describe('DOK level: 1=Facts, 2=Summaries, 3=Insights, 4=SPOVs'),
+      itemId: z.number().describe('Item ID (from get_brainlift_assessment output)'),
+      confirm: z.boolean().default(false).describe('false = preview impact only (safe). true = execute deletion (irreversible).'),
     },
     async (args) => handleDeleteDokItem(args, env, props),
   );
