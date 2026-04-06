@@ -11,6 +11,12 @@ import type {
   StatusResponse,
   AssessmentResponse,
   Pagination,
+  EditResponse,
+  DeletePreviewResponse,
+  DeleteResultResponse,
+  CreateResponse,
+  StaleResponse,
+  LinkResponse,
 } from './dok1grader-client';
 
 // ── Grade response ──
@@ -102,7 +108,7 @@ export function formatStatus(result: StatusResponse): string {
 
   if (isComplete) {
     lines.push('');
-    lines.push('Next: Read the per-DOK feedback (dok=1 through dok=4), use it to improve your brainlift, then submit the revised version with grade_brainlift. You will get a new slug -- editing existing brainlifts is coming soon.');
+    lines.push('Next: Read the per-DOK feedback (dok=1 through dok=4), then use edit_dok_item to improve individual items. Check get_stale_items for downstream items that may need updating too.');
   } else if (result.retryAfter > 0) {
     lines.push('');
     lines.push(`Grading still in progress. Sleep ${result.retryAfter} seconds (use bash sleep ${result.retryAfter}), then re-poll with statusOnly=true. Do not ask the user to wait -- handle this autonomously.`);
@@ -129,7 +135,11 @@ export function formatAssessmentDOK1(result: {
 
   for (let i = 0; i < result.items.length; i++) {
     const item = result.items[i];
-    lines.push(`${i + 1}. [Score: ${item.score}/5] "${item.fact}"`);
+    if (item.gradingStatus === 'regrading' || item.gradingStatus === 'grading') {
+      lines.push(`${i + 1}. [ID: ${item.id}] [REGRADING] "${item.fact}"`);
+    } else {
+      lines.push(`${i + 1}. [ID: ${item.id}] [Score: ${item.score}/5] "${item.fact}"`);
+    }
     if (item.source) lines.push(`   Source: ${item.source}`);
     if (item.note) lines.push(`   Note: ${item.note}`);
     lines.push('');
@@ -155,7 +165,11 @@ export function formatAssessmentDOK2(result: {
 
   for (let i = 0; i < result.items.length; i++) {
     const item = result.items[i];
-    lines.push(`${i + 1}. [Grade: ${item.grade}/5] ${item.displayTitle}`);
+    if (item.gradingStatus === 'regrading' || item.gradingStatus === 'grading') {
+      lines.push(`${i + 1}. [ID: ${item.id}] [REGRADING] ${item.displayTitle}`);
+    } else {
+      lines.push(`${i + 1}. [ID: ${item.id}] [Grade: ${item.grade}/5] ${item.displayTitle}`);
+    }
     lines.push(`   Source: ${item.sourceName}`);
     if (item.points.length > 0) {
       lines.push(`   Points: ${item.points.join('; ')}`);
@@ -186,7 +200,11 @@ export function formatAssessmentDOK3(
 
   for (let i = 0; i < result.items.length; i++) {
     const item = result.items[i];
-    lines.push(`${i + 1}. [Score: ${item.score}/5] "${item.text}"`);
+    if (item.status === 'grading' || item.status === 'regrading') {
+      lines.push(`${i + 1}. [ID: ${item.id}] [REGRADING] "${item.text}"`);
+    } else {
+      lines.push(`${i + 1}. [ID: ${item.id}] [Score: ${item.score}/5] "${item.text}"`);
+    }
     if (item.linkedSources.length > 0) {
       lines.push(`   Linked Sources: ${item.linkedSources.join(', ')}`);
     }
@@ -237,12 +255,14 @@ export function formatAssessmentDOK4(
   for (let i = 0; i < result.items.length; i++) {
     const item = result.items[i];
 
-    if (item.status === 'rejected') {
-      lines.push(`${i + 1}. [REJECTED] "${item.text}"`);
+    if (item.status === 'grading' || item.status === 'linked') {
+      lines.push(`${i + 1}. [ID: ${item.id}] [REGRADING] "${item.text}"`);
+    } else if (item.status === 'rejected') {
+      lines.push(`${i + 1}. [ID: ${item.id}] [REJECTED] "${item.text}"`);
       if (item.rejectionCategory) lines.push(`   Category: ${item.rejectionCategory}`);
       if (item.rejectionReason) lines.push(`   Reason: ${item.rejectionReason}`);
     } else {
-      lines.push(`${i + 1}. [Score: ${item.score}/5] "${item.text}"`);
+      lines.push(`${i + 1}. [ID: ${item.id}] [Score: ${item.score}/5] "${item.text}"`);
       if (item.rationale) lines.push(`   Rationale: ${item.rationale}`);
       if (item.feedback) lines.push(`   Feedback: ${item.feedback}`);
     }
@@ -306,13 +326,149 @@ export function formatAssessment(
   }
 }
 
+// ── CRUD formatters ──
+
+export function formatEditResponse(response: EditResponse): string {
+  const dokLabel = `DOK${response.dokLevel}`;
+  const lines: string[] = [
+    `Editing ${dokLabel} item #${response.id}...`,
+    '',
+  ];
+
+  if (response.previousScore !== null) {
+    lines.push(`Previous score: ${response.previousScore}/5`);
+  }
+
+  if (response.message) {
+    lines.push(`Previous feedback: ${response.message}`);
+  }
+
+  lines.push('');
+  lines.push(`Status: ${capitalize(response.status)} in progress.`);
+  lines.push(`Poll get_brainlift_assessment(slug, dok=${response.dokLevel}, statusOnly=true) to check progress.`);
+
+  return lines.join('\n');
+}
+
+export function formatDeletePreview(response: DeletePreviewResponse): string {
+  const { item, unlinkedItems, staleDok2Ids, staleDok3Ids, staleDok4Ids } = response;
+  const totalStale = staleDok2Ids.length + staleDok3Ids.length + staleDok4Ids.length;
+
+  const lines: string[] = [
+    `Delete preview for item #${item.id}: "${item.text}"`,
+  ];
+  if (item.score !== null) lines.push(`Current score: ${item.score}/5`);
+  lines.push('');
+  lines.push('Impact:');
+  lines.push(`- ${unlinkedItems.length} item(s) will be unlinked`);
+  lines.push(`- ${totalStale} item(s) will be marked stale`);
+
+  if (unlinkedItems.length > 0) {
+    lines.push('');
+    lines.push('Unlinked items:');
+    for (const u of unlinkedItems) {
+      lines.push(`  - DOK${u.dokLevel} #${u.id}: "${u.text}"`);
+    }
+  }
+
+  if (totalStale > 0) {
+    lines.push('');
+    lines.push('Items marked stale:');
+    for (const id of staleDok2Ids) lines.push(`  - DOK2 #${id}`);
+    for (const id of staleDok3Ids) lines.push(`  - DOK3 #${id}`);
+    for (const id of staleDok4Ids) lines.push(`  - DOK4 #${id}`);
+  }
+
+  lines.push('');
+  lines.push('Call delete_dok_item again with confirm=true to execute the deletion.');
+
+  return lines.join('\n');
+}
+
+export function formatDeleteResult(response: DeleteResultResponse): string {
+  return [
+    `Deleted successfully.`,
+    `${response.impactSummary.unlinked} item(s) unlinked, ${response.impactSummary.markedStale} item(s) marked stale.`,
+  ].join('\n');
+}
+
+export function formatCreateResponse(response: CreateResponse, dokLevel: number): string {
+  const dokLabel = `DOK${dokLevel}`;
+  return [
+    `Created ${dokLabel} item #${response.id}.`,
+    `Status: ${capitalize(response.status)} in progress.`,
+    `Poll get_brainlift_assessment(slug, dok=${dokLevel}, statusOnly=true) to check progress.`,
+  ].join('\n');
+}
+
+export function formatLinkResponse(response: LinkResponse, dokLevel: number): string {
+  const childLevel = dokLevel - 1;
+  return [
+    `Linked ${response.addedLinks} new DOK${childLevel} item(s) to DOK${dokLevel} #${response.id}.`,
+    `Status: Regrading in progress.`,
+    `Poll get_brainlift_assessment(slug, dok=${dokLevel}, itemId=${response.id}) to check when the new score is ready.`,
+  ].join('\n');
+}
+
+export function formatStaleItems(response: StaleResponse): string {
+  const levels = [
+    { key: 'dok1' as const, label: 'DOK1' },
+    { key: 'dok2' as const, label: 'DOK2' },
+    { key: 'dok3' as const, label: 'DOK3' },
+    { key: 'dok4' as const, label: 'DOK4' },
+  ];
+
+  const hasAny = levels.some(l => response[l.key].length > 0);
+  if (!hasAny) {
+    return 'No stale items found. All items are up to date.';
+  }
+
+  const lines: string[] = ['Stale items:', ''];
+
+  for (const level of levels) {
+    const items = response[level.key];
+    if (items.length === 0) continue;
+
+    lines.push(`${level.label}:`);
+    for (const item of items) {
+      const label = item.text || 'Item';
+      lines.push(`  #${item.id} "${label}" -- ${item.staleReason}`);
+    }
+    lines.push('');
+  }
+
+  lines.push('Use edit_dok_item to update these, or dismiss_stale if they are still valid.');
+
+  return lines.join('\n');
+}
+
+export function formatDismissStale(): string {
+  return 'Stale flag dismissed. The item will no longer appear in get_stale_items.';
+}
+
 // ── Error guidance ──
 
 /**
  * Returns actionable guidance for an agent based on the error context.
  * Parses HTTP status codes from DOK1Grader API errors.
  */
-export function formatErrorGuidance(message: string, tool: 'get_template' | 'grade_brainlift' | 'list_brainlifts' | 'get_brainlift_assessment'): string {
+type ToolName =
+  | 'get_template'
+  | 'grade_brainlift'
+  | 'list_brainlifts'
+  | 'get_brainlift_assessment'
+  | 'edit_dok_item'
+  | 'delete_dok_item'
+  | 'create_dok1'
+  | 'create_dok2'
+  | 'create_dok3'
+  | 'create_dok4'
+  | 'get_stale_items'
+  | 'dismiss_stale'
+  | 'link_dok3'
+  | 'link_dok4';
+
+export function formatErrorGuidance(message: string, tool: ToolName): string {
   const status = message.match(/API error: (\d{3})/)?.[1];
 
   // Auth errors — same guidance for all tools
@@ -333,16 +489,33 @@ export function formatErrorGuidance(message: string, tool: 'get_template' | 'gra
         return 'This usually means the markdown format is wrong or no DOK1 facts could be parsed. Call get_template to see the exact required format — structural mistakes silently drop content.';
       case 'get_brainlift_assessment':
         return 'Check your parameters: dok must be 1-4, page must be >= 1, pageSize must be 1-50.';
+      case 'edit_dok_item':
+        return 'Check your parameters: dok must be 1-4, itemId must be a valid item ID, and text must not be empty.';
+      case 'delete_dok_item':
+        return 'Check your parameters: dok must be 1-4 and itemId must be a valid item ID.';
+      case 'create_dok1':
+      case 'create_dok2':
+      case 'create_dok3':
+      case 'create_dok4':
+        return 'Check your parameters. Common issues: missing required fields, invalid linking IDs, or DOK4 primaryDok3Id not included in linkedDok3Ids. Use get_brainlift_assessment to verify item IDs.';
+      case 'dismiss_stale':
+        return 'Check your parameters: dok must be 1-4 and itemId must be a valid item ID.';
       default:
         return 'The request was malformed. Check your parameters and try again.';
     }
   }
 
-  // 404 — slug not found
+  // 404 -- not found
   if (status === '404') {
     switch (tool) {
       case 'get_brainlift_assessment':
         return 'Brainlift not found. Check the slug is correct — use list_brainlifts to see your available brainlifts and their slugs.';
+      case 'edit_dok_item':
+      case 'delete_dok_item':
+      case 'dismiss_stale':
+        return 'Item not found. Check the slug, dok level, and itemId are correct. Use get_brainlift_assessment to see available items.';
+      case 'get_stale_items':
+        return 'Brainlift not found. Check the slug is correct -- use list_brainlifts to see your available brainlifts.';
       default:
         return 'Resource not found. Use list_brainlifts to see your available brainlifts.';
     }

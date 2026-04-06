@@ -2,7 +2,8 @@
  * get_brainlift_assessment MCP tool.
  *
  * Retrieves grading status (statusOnly mode) or paginated assessment
- * results by DOK level (items mode).
+ * results by DOK level (items mode). Supports filtering, sorting, and
+ * single-item lookup.
  */
 
 import { z } from 'zod';
@@ -37,6 +38,10 @@ export async function handleGetBrainliftAssessment(
     pageSize?: number;
     statusOnly?: boolean;
     detail?: 'summary' | 'full';
+    itemId?: number;
+    sortBy?: 'id' | 'score' | 'updatedAt';
+    order?: 'asc' | 'desc';
+    status?: 'regrading' | 'grading' | 'graded' | 'error';
   },
   env: ToolEnv,
   props: ToolProps,
@@ -76,6 +81,12 @@ export async function handleGetBrainliftAssessment(
       page,
       pageSize,
       detail,
+      {
+        itemId: args.itemId,
+        sortBy: args.sortBy,
+        order: args.order,
+        status: args.status,
+      },
     );
 
     return {
@@ -106,7 +117,7 @@ export function registerGetBrainliftAssessment(
 ): void {
   server.tool(
     'get_brainlift_assessment',
-    'Get grading status or assessment results for a brainlift. Use statusOnly=true to poll progress (lightweight). Use dok=1-4 to get per-level results: 1=Facts, 2=Summaries, 3=Insights, 4=SPOVs. Wait ~30 seconds between status polls.',
+    'Get grading status or assessment results for a brainlift. Use statusOnly=true to poll progress (lightweight). Use dok=1-4 to get per-level results. Use itemId to check a specific item after edit/create (most efficient polling). Use sortBy=score&order=asc to find lowest-scoring items. Use status=regrading to see items currently being regraded.',
     {
       slug: z.string().describe(
         'The brainlift slug returned by grade_brainlift or list_brainlifts.',
@@ -125,6 +136,18 @@ export function registerGetBrainliftAssessment(
       ),
       detail: z.enum(['summary', 'full']).default('summary').optional().describe(
         "Level of detail for DOK3/DOK4 items. 'summary' returns scores + rationale + feedback. 'full' adds per-criterion breakdown, traceability, and divergence analysis. Default: 'summary'.",
+      ),
+      itemId: z.number().int().optional().describe(
+        'Filter to a single item by its ID. Use after edit_dok_item or create_dok* to check if regrading is complete for that specific item.',
+      ),
+      sortBy: z.enum(['id', 'score', 'updatedAt']).optional().describe(
+        "Sort field. 'score' to find lowest/highest scoring items, 'updatedAt' for recently edited items, 'id' for default order.",
+      ),
+      order: z.enum(['asc', 'desc']).optional().describe(
+        "Sort direction. 'asc' for ascending (low scores first), 'desc' for descending (recent first). Default: 'asc' for id/score, 'desc' for updatedAt.",
+      ),
+      status: z.enum(['regrading', 'grading', 'graded', 'error']).optional().describe(
+        "Filter by grading status. Use 'regrading' to see items currently being regraded after an edit. Use 'error' to find items that failed grading.",
       ),
     },
     async (args) => handleGetBrainliftAssessment(args, env, props),

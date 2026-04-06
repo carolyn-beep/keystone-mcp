@@ -70,6 +70,57 @@ export interface AssessmentResponse {
   pagination: Pagination;
 }
 
+// ── CRUD response types ──
+
+export interface EditResponse {
+  id: number;
+  dokLevel: number;
+  status: 'regrading';
+  previousScore: number | null;
+  message: string;
+}
+
+export interface DeletePreviewResponse {
+  item: { id: number; text: string; score: number | null };
+  unlinkedItems: Array<{ id: number; dokLevel: number; text: string }>;
+  staleDok2Ids: number[];
+  staleDok3Ids: number[];
+  staleDok4Ids: number[];
+}
+
+export interface DeleteResultResponse {
+  deleted: true;
+  impactSummary: { unlinked: number; markedStale: number };
+}
+
+export interface CreateResponse {
+  id: number;
+  status: 'grading';
+}
+
+export interface StaleItem {
+  id: number;
+  text: string | null;
+  staleReason: string | null;
+}
+
+export interface StaleResponse {
+  dok1: StaleItem[];
+  dok2: StaleItem[];
+  dok3: StaleItem[];
+  dok4: StaleItem[];
+}
+
+export interface DismissStaleResponse {
+  dismissed: boolean;
+}
+
+export interface LinkResponse {
+  id: number;
+  addedLinks: number;
+  status: string;
+}
+
 export class DOK1GraderClient {
   private baseUrl: string;
   private serviceKey: string;
@@ -157,6 +208,12 @@ export class DOK1GraderClient {
     page: number,
     pageSize: number,
     detail: 'summary' | 'full' = 'summary',
+    filters: {
+      itemId?: number;
+      sortBy?: 'id' | 'score' | 'updatedAt';
+      order?: 'asc' | 'desc';
+      status?: string;
+    } = {},
   ): Promise<AssessmentResponse> {
     const params = new URLSearchParams({
       dok: String(dok),
@@ -164,6 +221,11 @@ export class DOK1GraderClient {
       pageSize: String(pageSize),
       detail,
     });
+    if (filters.itemId != null) params.set('itemId', String(filters.itemId));
+    if (filters.sortBy) params.set('sortBy', filters.sortBy);
+    if (filters.order) params.set('order', filters.order);
+    if (filters.status) params.set('status', filters.status);
+
     const response = await this.request(
       'GET',
       `/api/internal/brainlifts/${slug}/assessment?${params.toString()}`,
@@ -171,11 +233,171 @@ export class DOK1GraderClient {
     return (await response.json()) as AssessmentResponse;
   }
 
+  // ── CRUD methods ──
+
+  /**
+   * Edit the text of a DOK item. Triggers regrading.
+   */
+  async editDokItem(
+    slug: string,
+    dok: number,
+    itemId: number,
+    text: string,
+  ): Promise<EditResponse> {
+    const response = await this.request(
+      'PATCH',
+      `/api/internal/brainlifts/${slug}/dok/${dok}/items/${itemId}`,
+      { text },
+    );
+    return (await response.json()) as EditResponse;
+  }
+
+  /**
+   * Delete a DOK item. When preview=true, returns impact preview without deleting.
+   */
+  async deleteDokItem(
+    slug: string,
+    dok: number,
+    itemId: number,
+    preview: boolean,
+  ): Promise<DeletePreviewResponse | DeleteResultResponse> {
+    const previewParam = preview ? '?preview=true' : '';
+    const response = await this.request(
+      'DELETE',
+      `/api/internal/brainlifts/${slug}/dok/${dok}/items/${itemId}${previewParam}`,
+    );
+    return (await response.json()) as DeletePreviewResponse | DeleteResultResponse;
+  }
+
+  /**
+   * Create a new DOK1 fact.
+   */
+  async createDok1(
+    slug: string,
+    data: { fact: string; source: string; category?: string },
+  ): Promise<CreateResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/dok1`,
+      data,
+    );
+    return (await response.json()) as CreateResponse;
+  }
+
+  /**
+   * Create a new DOK2 summary.
+   */
+  async createDok2(
+    slug: string,
+    data: {
+      sourceName: string;
+      sourceUrl?: string;
+      points: string[];
+      relatedFactIds: number[];
+    },
+  ): Promise<CreateResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/dok2`,
+      data,
+    );
+    return (await response.json()) as CreateResponse;
+  }
+
+  /**
+   * Create a new DOK3 insight.
+   */
+  async createDok3(
+    slug: string,
+    data: { text: string; linkedDok2Ids: number[] },
+  ): Promise<CreateResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/dok3`,
+      data,
+    );
+    return (await response.json()) as CreateResponse;
+  }
+
+  /**
+   * Create a new DOK4 SPOV.
+   */
+  async createDok4(
+    slug: string,
+    data: { text: string; linkedDok3Ids: number[]; primaryDok3Id: number },
+  ): Promise<CreateResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/dok4`,
+      data,
+    );
+    return (await response.json()) as CreateResponse;
+  }
+
+  /**
+   * Get all stale items in a brainlift.
+   */
+  async getStaleItems(slug: string): Promise<StaleResponse> {
+    const response = await this.request(
+      'GET',
+      `/api/internal/brainlifts/${slug}/stale`,
+    );
+    return (await response.json()) as StaleResponse;
+  }
+
+  /**
+   * Dismiss the stale flag on an item.
+   */
+  async dismissStale(
+    slug: string,
+    dok: number,
+    itemId: number,
+  ): Promise<DismissStaleResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/dok/${dok}/items/${itemId}/dismiss-stale`,
+    );
+    return (await response.json()) as DismissStaleResponse;
+  }
+
+  /**
+   * Add DOK2 summary links to an existing DOK3 insight.
+   */
+  async linkDok3(
+    slug: string,
+    insightId: number,
+    dok2Ids: number[],
+  ): Promise<LinkResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/dok3/${insightId}/links`,
+      { dok2Ids },
+    );
+    return (await response.json()) as LinkResponse;
+  }
+
+  /**
+   * Add DOK3 insight links to an existing DOK4 SPOV.
+   */
+  async linkDok4(
+    slug: string,
+    spovId: number,
+    dok3Ids: number[],
+    newPrimaryDok3Id?: number,
+  ): Promise<LinkResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/dok4/${spovId}/links`,
+      { dok3Ids, ...(newPrimaryDok3Id != null ? { newPrimaryDok3Id } : {}) },
+    );
+    return (await response.json()) as LinkResponse;
+  }
+
   /**
    * Make an authenticated request to DOK1Grader.
    */
   private async request(
-    method: 'GET' | 'POST',
+    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
     path: string,
     body?: object,
   ): Promise<Response> {
@@ -196,7 +418,7 @@ export class DOK1GraderClient {
 
     const config: RequestInit = { method, headers };
 
-    if (body && method === 'POST') {
+    if (body && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
       config.body = JSON.stringify(body);
     }
 
