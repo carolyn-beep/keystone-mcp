@@ -57,7 +57,9 @@ export async function handleDismissStale(
 export function registerDismissStale(server: McpServer, env: ToolEnv, props: ToolProps): void {
   server.tool(
     'dismiss_stale',
-    'Dismiss the stale flag on an item after reviewing it. Use this when you have read the item and determined it is still valid despite a foundation item being edited or deleted. If the item IS affected by the change, use edit_dok_item to update it instead of dismissing.',
+    `Dismiss the stale flag on an item. A stale item's grade was calculated on foundation data that has since changed -- its score and feedback are frozen on outdated inputs. Dismissing clears the flag without triggering a regrade.
+
+Before deciding, read the item's current feedback via get_brainlift_assessment and consider what changed underneath (the stale reason tells you). If the foundation change means the current feedback no longer makes sense for this item, use edit_dok_item to address the feedback while incorporating the updated foundation -- the context-aware regrading system will recognize the improvement. If the item still stands on its own despite the change below, dismissing is the right call.`,
     {
       slug: z.string().describe('Brainlift slug'),
       dok: z.number().min(1).max(4).describe('DOK level: 1=Facts, 2=Summaries, 3=Insights, 4=SPOVs'),

@@ -437,7 +437,7 @@ export function formatStaleItems(response: StaleResponse): string {
     lines.push('');
   }
 
-  lines.push('Use edit_dok_item to update these, or dismiss_stale if they are still valid.');
+  lines.push('These items have grades frozen on outdated foundation data. For each, read its current feedback via get_brainlift_assessment and consider whether the foundation change affects it. Editing triggers a regrade against the updated foundation; dismissing clears the flag without regrading.');
 
   return lines.join('\n');
 }
