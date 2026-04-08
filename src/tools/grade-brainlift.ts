@@ -82,7 +82,7 @@ export function registerGradeBrainlift(
 ): void {
   server.tool(
     'grade_brainlift',
-    'Submit a Brainlift in markdown format for grading. Returns a slug to track progress. Call get_template FIRST to see the required format -- structural mistakes silently drop content.',
+    'Create a new Brainlift by submitting its full markdown for grading. This is the primary way to create brainlifts -- no separate "create" tool exists. Returns a slug to track progress. Call get_template FIRST to see the required format -- structural mistakes silently drop content.',
     {
       markdown: z.string().describe(
         'Complete Brainlift in markdown format. Use get_template first to see the required format.',
