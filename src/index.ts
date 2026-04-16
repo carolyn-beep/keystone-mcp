@@ -205,6 +205,11 @@ export default {
       clientRegistrationEndpoint: '/register',
       defaultHandler: GoogleHandler as any,
       tokenEndpoint: '/token',
+      // 24h access tokens (default is 1h). Reduces how often clients hit the
+      // refresh path -- some MCP clients (e.g. OpenClaw via mcporter) have
+      // bugs persisting rotated refresh tokens, which forced users into a
+      // browser re-auth every hour.
+      accessTokenTTL: 24 * 60 * 60,
     });
 
     return provider.fetch(request, adaptedEnv, ctx);
