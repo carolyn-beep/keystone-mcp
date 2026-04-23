@@ -1,10 +1,23 @@
 # Brainlift MCP Server
 
-A [Model Context Protocol](https://modelcontextprotocol.io/) server that lets any MCP-compatible AI agent create and grade Brainlifts programmatically. Built as a Cloudflare Worker with Google OAuth, backed by the DOK1Grader platform.
+A [Model Context Protocol](https://modelcontextprotocol.io/) server that lets any MCP-compatible AI agent work with Brainlifts programmatically — create them, grade them, curate them, and drive a 30-day execution sprint. Built as a Cloudflare Worker with Google OAuth, backed by the DOK1Grader platform.
+
+## Two server variants
+
+This repo ships two workers from the same codebase:
+
+| Worker | Entrypoint | Toolset | Intended user |
+|---|---|---|---|
+| `brainlift-mcp` | `src/index.ts` | Brainlift CRUD, grading, DOK-item curation | General MCP clients — authors building and grading Brainlifts |
+| `brainlift-mcp-student` | `src/index.student.ts` | All of the above plus 30-day sprint planning and deliverables | Students going through the Scope Breaker sprint flow with a coach-agent |
+
+The student variant composes the general Brainlift instructions with a sprint-specific coaching appendix and registers the additional sprint tools.
 
 ## What it does
 
-An AI agent connects via MCP, authenticates with Google, and gets access to four tools:
+An AI agent connects via MCP, authenticates with Google, and gets access to the tools listed below. The agent never talks to DOK1Grader directly — the MCP server handles auth, user provisioning, and API communication behind the scenes.
+
+### Shared tools (both variants)
 
 | Tool | Description | Pattern |
 |------|-------------|---------|
@@ -12,8 +25,25 @@ An AI agent connects via MCP, authenticates with Google, and gets access to four
 | `grade_brainlift` | Submits markdown for grading, returns a slug to track progress | Fire-and-forget |
 | `list_brainlifts` | Lists the user's brainlifts with slugs, scores, and status | Paginated |
 | `get_brainlift_assessment` | Returns grading status or per-DOK-level results | Paginated poll |
+| `create_dok1` / `create_dok2` / `create_dok3` / `create_dok4` | Append a new item to an existing graded brainlift | Fire-and-forget |
+| `edit_dok_item` | Edit an existing DOK item; retriggers grading | Fire-and-forget |
+| `delete_dok_item` | Delete a DOK item; cascades staleness to linked downstream items | Synchronous |
+| `link_dok3` / `link_dok4` | Link newly-created DOK2s / DOK3s to an existing DOK3 / DOK4 item | Synchronous |
+| `get_stale_items` | List items flagged stale after upstream edits | Paginated |
+| `dismiss_stale` | Mark a stale item as still valid without editing it | Synchronous |
 
-The agent never talks to DOK1Grader directly. The MCP server handles auth, user provisioning, and API communication behind the scenes.
+### Student-only tools
+
+| Tool | Description | Pattern |
+|------|-------------|---------|
+| `generate_plan` | Kick off a 30-day sprint plan after a short diagnosis conversation; returns immediately with a `generating` plan | Async (background job) |
+| `get_plan` | Poll plan status (`generating` / `active` / `failed`) and read the active plan | Synchronous |
+| `list_tasks` | Surface today's tasks plus overdue items for the active plan | Synchronous |
+| `get_task` | Full task detail including stage, milestone flag, and deliverable status | Synchronous |
+| `save_deliverable` | Create a Google Doc deliverable for a task | Synchronous |
+| `read_deliverable` | Read the current contents of a task's deliverable | Synchronous |
+| `update_deliverable` | Replace the contents of a deliverable with new markdown | Synchronous |
+| `list_deliverables` | List all deliverables across plans for a brainlift | Paginated |
 
 ## Architecture
 
@@ -108,26 +138,43 @@ Not `{"score":4,"fact":"The Supreme Court..."}`.
 ```
 brainlift-mcp/
   src/
-    index.ts                      # BrainliftMCP agent class, server instructions, OAuth wiring
+    index.ts                      # brainlift-mcp entrypoint — general author variant
+    index.student.ts              # brainlift-mcp-student entrypoint — author + sprint tools
     google-handler.ts             # Google OAuth authorize/callback flow
+    instructions/
+      brainlift.ts                # Shared server instructions (DOK levels, workflows, curation posture)
+      student-sprint.ts           # Sprint appendix composed into the student variant only
     tools/
-      get-template.ts             # get_template tool
-      grade-brainlift.ts          # grade_brainlift tool
-      list-brainlifts.ts          # list_brainlifts tool
-      get-brainlift-assessment.ts # get_brainlift_assessment tool (status + items modes)
+      get-template.ts             # Brainlift markdown template
+      grade-brainlift.ts          # Submit brainlift for grading
+      list-brainlifts.ts          # List the user's brainlifts
+      get-brainlift-assessment.ts # Grading status + per-DOK results
+      create-dok{1,2,3,4}.ts      # Append items to a graded brainlift
+      edit-dok-item.ts            # Edit an existing DOK item
+      delete-dok-item.ts          # Delete with staleness cascade preview
+      link-dok{3,4}.ts            # Link new items into existing DOK3/DOK4
+      get-stale-items.ts          # Read items flagged stale
+      dismiss-stale.ts            # Mark stale items as still valid
+      generate-plan.ts            # [student] Kick off 30-day sprint generation
+      get-plan.ts                 # [student] Poll or read the active plan
+      get-task.ts                 # [student] Full task detail
+      list-tasks.ts               # [student] Today + overdue tasks
+      save-deliverable.ts         # [student] Create a task's Google Doc
+      read-deliverable.ts         # [student] Read a deliverable
+      update-deliverable.ts       # [student] Replace a deliverable's content
+      list-deliverables.ts        # [student] List deliverables per plan
     utils/
       dok1grader-client.ts        # HTTP client for DOK1Grader internal API
       formatters.ts               # Human-readable response formatters + error guidance
     types/
       env.d.ts                    # Env and Props interfaces
-    __tests__/                    # 73 tests across 7 test files
-  wrangler.jsonc                  # Cloudflare Worker config (Durable Object + KV)
+    __tests__/                    # Vitest suite for tools, formatters, and client
+  wrangler.jsonc                  # brainlift-mcp (author) Cloudflare Worker config
+  wrangler.student.jsonc          # brainlift-mcp-student Cloudflare Worker config (incl. staging env)
   package.json
   tsconfig.json
   vitest.config.ts
 ```
-
-**1,588 lines of source, 1,243 lines of tests, 73 tests passing.**
 
 ## Setup
 
@@ -193,21 +240,58 @@ This key goes into the MCP server's `DOK1GRADER_SERVICE_KEY` env var.
 
 ```bash
 npm install
-npm run dev          # starts wrangler dev on port 8787
+npm run dev              # brainlift-mcp (author variant) on port 8787
+npm run dev:student      # brainlift-mcp-student (author + sprint) on port 8788
 ```
 
 ### Run tests
 
 ```bash
-npm test             # vitest run (73 tests)
-npm run test:watch   # vitest watch mode
+npm test                 # vitest run
+npm run test:watch       # vitest watch mode
 ```
 
 ### Deploy
 
+**Author variant (brainlift-mcp → prod):**
+
 ```bash
-npm run deploy       # wrangler deploy
+npm run deploy                                         # wrangler deploy (default config)
 ```
+
+**Student variant — prod:**
+
+```bash
+npx wrangler deploy --config wrangler.student.jsonc    # → brainlift-mcp-student (prod: brainliftcentral.com)
+```
+
+**Student variant — staging:**
+
+```bash
+npx wrangler deploy --config wrangler.student.jsonc --env staging
+# → brainlift-mcp-student-staging (staging: brainlift-platform.onrender.com)
+```
+
+The staging env block lives in `wrangler.student.jsonc` under `env.staging`. It publishes as a separate Cloudflare Worker (`brainlift-mcp-student-staging`) with its own `DOK1GRADER_BASE_URL` pointing at the staging backend. Secrets (OAuth credentials, cookie key, staging service API key) must be set per-env:
+
+```bash
+npx wrangler secret put DOK1GRADER_SERVICE_KEY --config wrangler.student.jsonc --env staging
+npx wrangler secret put GOOGLE_CLIENT_ID       --config wrangler.student.jsonc --env staging
+npx wrangler secret put GOOGLE_CLIENT_SECRET   --config wrangler.student.jsonc --env staging
+npx wrangler secret put COOKIE_ENCRYPTION_KEY  --config wrangler.student.jsonc --env staging
+```
+
+The staging worker needs its own row in the DOK1Grader staging `api_keys` table. Generate a new plaintext key, insert its record into staging's DB, then pipe the plaintext into `DOK1GRADER_SERVICE_KEY` above.
+
+### Google OAuth redirect URIs
+
+Each worker hostname needs its own authorized redirect URI in the Google Cloud Console OAuth client:
+
+- `https://brainlift-mcp.<subdomain>.workers.dev/callback`
+- `https://brainlift-mcp-student.<subdomain>.workers.dev/callback`
+- `https://brainlift-mcp-student-staging.<subdomain>.workers.dev/callback`
+
+You can share one OAuth client across all three as long as all callbacks are registered; or use separate clients per worker if you want isolation.
 
 ## Connecting an MCP client
 

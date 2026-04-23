@@ -1,0 +1,64 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "brainlift-mcp-student",
+  "main": "src/index.student.ts",
+  "compatibility_date": "2025-03-10",
+  "compatibility_flags": ["nodejs_compat"],
+  "migrations": [
+    {
+      "new_sqlite_classes": ["BrainliftStudentMCP"],
+      "tag": "v1"
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "class_name": "BrainliftStudentMCP",
+        "name": "MCP_OBJECT"
+      }
+    ]
+  },
+  "kv_namespaces": [
+    {
+      "binding": "BRAINLIFT_MCP_OAUTH_KV",
+      "id": "6d84a93d36aa4bbba0f7162afb07d035"
+    }
+  ],
+  "observability": {
+    "enabled": true
+  },
+  "vars": {
+    "DOK1GRADER_BASE_URL": "https://brainliftcentral.com"
+  },
+  "env": {
+    "staging": {
+      "name": "brainlift-mcp-student-staging",
+      "migrations": [
+        {
+          "new_sqlite_classes": ["BrainliftStudentMCP"],
+          "tag": "v1"
+        }
+      ],
+      "durable_objects": {
+        "bindings": [
+          {
+            "class_name": "BrainliftStudentMCP",
+            "name": "MCP_OBJECT"
+          }
+        ]
+      },
+      "kv_namespaces": [
+        {
+          "binding": "BRAINLIFT_MCP_OAUTH_KV",
+          "id": "632a048d510b4b68a6bcdb1581095c3c"
+        }
+      ],
+      "vars": {
+        "DOK1GRADER_BASE_URL": "https://brainlift-platform.onrender.com"
+      }
+    }
+  },
+  "dev": {
+    "port": 8788
+  }
+}

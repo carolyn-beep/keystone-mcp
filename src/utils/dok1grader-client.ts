@@ -70,6 +70,104 @@ export interface AssessmentResponse {
   pagination: Pagination;
 }
 
+// ── Scope Breaker sprint types ──
+
+export interface PlanHistoryItem {
+  id: number;
+  startDate: string;
+  endDate: string;
+  status: 'active' | 'complete' | 'generating' | 'failed';
+  taskCount: number;
+  completedTaskCount: number;
+  generationError?: string | null;
+}
+
+export type SprintTaskMilestone = 'weekly_artifact';
+
+export interface TaskListItem {
+  id: number;
+  planId: number;
+  scheduledDate: string;
+  weekNumber: number;
+  dayInWeek: number;
+  title: string;
+  description: string;
+  milestone: SprintTaskMilestone | null;
+  isComplete: boolean;
+  isPastDue: boolean;
+  deliverable: {
+    id: number;
+    title: string;
+    docUrl: string;
+    createdAt: string;
+  } | null;
+}
+
+export interface GeneratePlanInput {
+  localDate: string;
+  diagnosis: {
+    goalRaw: string;
+    currentState: string;
+  };
+}
+
+export interface TaskDetailResponse extends TaskListItem {
+  plan: {
+    id: number;
+    startDate: string;
+    endDate: string;
+    status: 'active' | 'complete' | 'generating' | 'failed';
+  };
+}
+
+export interface GeneratedPlanResponse {
+  plan: PlanHistoryItem;
+  tasks: TaskListItem[];
+}
+
+export interface ListTasksQuery {
+  date?: string;
+  week?: number;
+  state?: 'all' | 'complete' | 'incomplete';
+  includePastDue?: boolean;
+  localDate?: string;
+}
+
+export interface SaveDeliverableInput {
+  title: string;
+  markdown: string;
+}
+
+export interface UpdateDeliverableInput {
+  markdown: string;
+}
+
+export interface DeliverableWriteResponse {
+  docUrl: string;
+}
+
+export interface ReadDeliverableResponse {
+  title: string;
+  contentMarkdown: string;
+  docUrl: string;
+}
+
+export interface DeliverableListItem {
+  id: number;
+  taskId: number;
+  planId: number;
+  title: string;
+  taskTitle: string;
+  scheduledDate: string;
+  createdAt: string;
+  docUrl: string;
+}
+
+export interface DeliverableListResponse {
+  plans: PlanHistoryItem[];
+  deliverables: DeliverableListItem[];
+}
+
 // ── CRUD response types ──
 
 export interface EditResponse {
@@ -231,6 +329,127 @@ export class DOK1GraderClient {
       `/api/internal/brainlifts/${slug}/assessment?${params.toString()}`,
     );
     return (await response.json()) as AssessmentResponse;
+  }
+
+  // ── Scope Breaker sprint methods ──
+
+  /**
+   * Generate a new 30-day sprint plan.
+   * Calls POST /api/internal/brainlifts/:slug/plans.
+   */
+  async generatePlan(slug: string, input: GeneratePlanInput): Promise<GeneratedPlanResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/plans`,
+      input,
+    );
+    return (await response.json()) as GeneratedPlanResponse;
+  }
+
+  /**
+   * Get active sprint plan state.
+   * Calls GET /api/internal/brainlifts/:slug/plans/active.
+   */
+  async getPlan(slug: string): Promise<GeneratedPlanResponse | null> {
+    const response = await this.request(
+      'GET',
+      `/api/internal/brainlifts/${slug}/plans/active`,
+    );
+    const result = (await response.json()) as GeneratedPlanResponse | {
+      plan: null;
+      tasks: TaskListItem[];
+    };
+    if (!result.plan) return null;
+    return result as GeneratedPlanResponse;
+  }
+
+  /**
+   * List sprint tasks for a brainlift.
+   * Calls GET /api/internal/brainlifts/:slug/tasks.
+   */
+  async listTasks(slug: string, query: ListTasksQuery = {}): Promise<TaskListItem[]> {
+    const params = toQueryParams(query);
+    const queryString = params.toString();
+    const response = await this.request(
+      'GET',
+      `/api/internal/brainlifts/${slug}/tasks${queryString ? `?${queryString}` : ''}`,
+    );
+    return (await response.json()) as TaskListItem[];
+  }
+
+  /**
+   * Get one sprint task detail.
+   * Calls GET /api/internal/brainlifts/:slug/tasks/:taskId.
+   */
+  async getTask(slug: string, taskId: number): Promise<TaskDetailResponse> {
+    const response = await this.request(
+      'GET',
+      `/api/internal/brainlifts/${slug}/tasks/${taskId}`,
+    );
+    return (await response.json()) as TaskDetailResponse;
+  }
+
+  /**
+   * Create a deliverable for a sprint task.
+   * Calls POST /api/internal/brainlifts/:slug/tasks/:taskId/deliverable.
+   */
+  async saveDeliverable(
+    slug: string,
+    taskId: number,
+    input: SaveDeliverableInput,
+  ): Promise<DeliverableWriteResponse> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/tasks/${taskId}/deliverable`,
+      input,
+    );
+    return (await response.json()) as DeliverableWriteResponse;
+  }
+
+  /**
+   * Read the current deliverable for a sprint task.
+   * Calls GET /api/internal/brainlifts/:slug/tasks/:taskId/deliverable.
+   */
+  async readDeliverable(slug: string, taskId: number): Promise<ReadDeliverableResponse> {
+    const response = await this.request(
+      'GET',
+      `/api/internal/brainlifts/${slug}/tasks/${taskId}/deliverable`,
+    );
+    return (await response.json()) as ReadDeliverableResponse;
+  }
+
+  /**
+   * Update the current deliverable for a sprint task.
+   * Calls PUT /api/internal/brainlifts/:slug/tasks/:taskId/deliverable.
+   */
+  async updateDeliverable(
+    slug: string,
+    taskId: number,
+    input: UpdateDeliverableInput,
+  ): Promise<DeliverableWriteResponse> {
+    const response = await this.request(
+      'PUT',
+      `/api/internal/brainlifts/${slug}/tasks/${taskId}/deliverable`,
+      input,
+    );
+    return (await response.json()) as DeliverableWriteResponse;
+  }
+
+  /**
+   * List all deliverables for a brainlift.
+   * Calls GET /api/internal/brainlifts/:slug/deliverables.
+   */
+  async listDeliverables(
+    slug: string,
+    query: { planId?: number } = {},
+  ): Promise<DeliverableListResponse> {
+    const params = toQueryParams(query);
+    const queryString = params.toString();
+    const response = await this.request(
+      'GET',
+      `/api/internal/brainlifts/${slug}/deliverables${queryString ? `?${queryString}` : ''}`,
+    );
+    return (await response.json()) as DeliverableListResponse;
   }
 
   // ── CRUD methods ──
@@ -397,7 +616,7 @@ export class DOK1GraderClient {
    * Make an authenticated request to DOK1Grader.
    */
   private async request(
-    method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
+    method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
     path: string,
     body?: object,
   ): Promise<Response> {
@@ -418,7 +637,7 @@ export class DOK1GraderClient {
 
     const config: RequestInit = { method, headers };
 
-    if (body && (method === 'POST' || method === 'PATCH' || method === 'DELETE')) {
+    if (body && (method === 'POST' || method === 'PATCH' || method === 'PUT' || method === 'DELETE')) {
       config.body = JSON.stringify(body);
     }
 
@@ -433,4 +652,13 @@ export class DOK1GraderClient {
 
     return response;
   }
+}
+
+function toQueryParams(query: object): URLSearchParams {
+  const params = new URLSearchParams();
+  for (const [key, value] of Object.entries(query as Record<string, unknown>)) {
+    if (value == null) continue;
+    params.set(key, String(value));
+  }
+  return params;
 }

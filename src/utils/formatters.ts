@@ -9,7 +9,6 @@ import type {
   GradeResponse,
   ListBrainliftsResponse,
   StatusResponse,
-  AssessmentResponse,
   Pagination,
   EditResponse,
   DeletePreviewResponse,
@@ -17,6 +16,11 @@ import type {
   CreateResponse,
   StaleResponse,
   LinkResponse,
+  GeneratedPlanResponse,
+  TaskListItem,
+  TaskDetailResponse,
+  ReadDeliverableResponse,
+  DeliverableListResponse,
 } from './dok1grader-client';
 
 // ── Grade response ──
@@ -326,6 +330,241 @@ export function formatAssessment(
   }
 }
 
+// ── Scope Breaker sprint formatters ──
+
+function milestoneMarker(task: Pick<TaskListItem, 'milestone'>): string {
+  return task.milestone === 'weekly_artifact' ? '[FLAGSHIP] ' : '';
+}
+
+/**
+ * Map a task's position in the sprint to its stage name.
+ *
+ * The plan's `weekNumber` counts 5-workday weeks (1..6 for a 30-workday
+ * plan), which does not align with the 4 sprint stages (Exploration,
+ * Thesis, Validation, Execution) defined over day_number ranges
+ * 1-7, 8-14, 15-21, 22-30. Derive the stage from the absolute day number.
+ */
+function stageForTask(task: Pick<TaskListItem, 'weekNumber' | 'dayInWeek'>): string {
+  const dayNumber = (task.weekNumber - 1) * 5 + task.dayInWeek;
+  if (dayNumber <= 7) return 'Exploration';
+  if (dayNumber <= 14) return 'Thesis';
+  if (dayNumber <= 21) return 'Validation';
+  return 'Execution';
+}
+
+function buildSprintUrl(baseUrl: string | undefined, slug: string): string | null {
+  if (!baseUrl) return null;
+  const trimmed = baseUrl.replace(/\/+$/, '');
+  return `${trimmed}/grading/${encodeURIComponent(slug)}?tab=sprint`;
+}
+
+export function formatGeneratedPlan(
+  result: GeneratedPlanResponse,
+  context: { slug: string; baseUrl?: string; localDate?: string },
+): string {
+  const sprintUrl = buildSprintUrl(context.baseUrl, context.slug);
+  const lines: string[] = [
+    `Sprint plan generation started: ${result.plan.startDate} to ${result.plan.endDate}`,
+    `Plan ID: ${result.plan.id}`,
+    `Status: ${result.plan.status}`,
+    '',
+  ];
+
+  if (result.plan.status === 'generating') {
+    lines.push('The plan is being generated in the background. This typically takes 3-5 minutes.');
+    lines.push('');
+    lines.push('Next steps:');
+    lines.push("1. Tell the student: \"I've kicked off your 30-day plan. It takes about 3-5 minutes. I'll check back shortly.\"");
+    lines.push(`2. Wait ~60 seconds, then call get_plan with brainliftSlug=${context.slug} to check status.`);
+    lines.push('3. Keep polling every 30-60s until status is "active" (ready) or "failed" (retry).');
+    if (sprintUrl) {
+      lines.push(`4. Once ready, the student can also view the calendar at: ${sprintUrl}`);
+    }
+    return lines.join('\n');
+  }
+
+  // Backwards-compatible branch: if the server ever returns a fully-populated
+  // active plan synchronously, keep the old preview + next-steps output.
+  const previewTasks = result.tasks.slice(0, 6);
+  const keyArtifactCount = result.tasks.filter((task) => task.milestone === 'weekly_artifact').length;
+  lines[0] = `Sprint plan generated: ${result.plan.startDate} to ${result.plan.endDate}`;
+  lines.push(`Tasks created: ${result.tasks.length} (${keyArtifactCount} flagship deliverables)`);
+  lines.push('');
+
+  if (previewTasks.length > 0) {
+    lines.push('First tasks:');
+    for (const task of previewTasks) {
+      lines.push(`- ${task.scheduledDate} (${stageForTask(task)}) :: ${milestoneMarker(task)}${task.title}`);
+    }
+    if (result.tasks.length > previewTasks.length) {
+      lines.push(`- ...and ${result.tasks.length - previewTasks.length} more task(s)`);
+    }
+  }
+
+  const todayTasks = context.localDate
+    ? result.tasks.filter((task) => task.scheduledDate === context.localDate)
+    : [];
+
+  lines.push('');
+  lines.push('Next steps — offer the student a choice:');
+  if (sprintUrl) {
+    lines.push(`- View the full 30-day calendar: ${sprintUrl}`);
+  }
+  if (todayTasks.length > 0) {
+    lines.push(`- Start on today's ${todayTasks.length} task(s) now — call list_tasks with localDate=${context.localDate} (or use the task IDs below) and work through them together:`);
+    for (const task of todayTasks) {
+      lines.push(`  • #${task.id} ${milestoneMarker(task)}${task.title}`);
+    }
+  } else {
+    lines.push("- Start on today's tasks: call list_tasks with the student's localDate to pull what's scheduled for today, then work through them together.");
+  }
+  lines.push('Ask which they prefer before continuing.');
+
+  return lines.join('\n');
+}
+
+export function formatNoActivePlan(): string {
+  return [
+    'No active sprint plan exists for this brainlift.',
+    'Next step: read the brainlift context (list_brainlifts + get_brainlift_assessment), then have a short targeted conversation with the student about their goal and current state. Call generate_plan with those as the diagnosis fields.',
+  ].join('\n');
+}
+
+export function formatActivePlan(
+  result: GeneratedPlanResponse,
+  context: { slug: string; baseUrl?: string } = { slug: '' },
+): string {
+  if (result.plan.status === 'generating') {
+    return [
+      `Plan ${result.plan.id} is still being generated (${result.plan.startDate} to ${result.plan.endDate}).`,
+      'This usually takes 3-5 minutes total. Wait another 30-60 seconds, then call get_plan again.',
+      'Do NOT call generate_plan a second time while this is in flight.',
+    ].join('\n');
+  }
+
+  if (result.plan.status === 'failed') {
+    const errorLine = result.plan.generationError
+      ? `Reason: ${result.plan.generationError}`
+      : 'No error detail was recorded.';
+    return [
+      `Plan ${result.plan.id} failed to generate.`,
+      errorLine,
+      'Next step: tell the student generation failed and ask if they want to retry. Calling generate_plan again will replace the failed plan.',
+    ].join('\n');
+  }
+
+  const sprintUrl = buildSprintUrl(context.baseUrl, context.slug);
+  const lines: string[] = [
+    `Plan is ready: ${result.plan.startDate} to ${result.plan.endDate}, ${result.tasks.length} tasks across four stages.`,
+  ];
+  if (sprintUrl) {
+    lines.push(`Full calendar: ${sprintUrl}`);
+  }
+  lines.push('');
+  lines.push("Agent next step: tell the student the plan is ready, share the calendar link above, then call list_tasks with the student's localDate and includePastDue=true to pull today's tasks. Keep your reply short — announce the plan, show today's tasks, and ask if they want to get into the first one. Leave the full structure for the student to explore in the calendar.");
+
+  return lines.join('\n');
+}
+
+export function formatTaskList(
+  tasks: TaskListItem[],
+  options: { includePastDue?: boolean } = {},
+): string {
+  if (tasks.length === 0) {
+    return 'No tasks matched the provided filters.';
+  }
+
+  const lines: string[] = [`Tasks (${tasks.length}):`, ''];
+  const overdueIncomplete = tasks.filter((task) => task.isPastDue && !task.isComplete);
+
+  if (options.includePastDue && overdueIncomplete.length > 0) {
+    lines.push(`Overdue incomplete tasks (${overdueIncomplete.length}):`);
+    for (const task of overdueIncomplete) {
+      lines.push(`- #${task.id} ${task.scheduledDate} :: ${task.title}`);
+    }
+    lines.push('');
+  }
+
+  lines.push('Task list:');
+  for (const task of tasks) {
+    const status = task.isComplete ? 'complete' : task.isPastDue ? 'overdue' : 'incomplete';
+    lines.push(`- #${task.id} [${status}] ${task.scheduledDate} (${stageForTask(task)}) :: ${milestoneMarker(task)}${task.title}`);
+  }
+
+  return lines.join('\n');
+}
+
+export function formatTaskDetail(task: TaskDetailResponse): string {
+  const status = task.isComplete ? 'complete' : task.isPastDue ? 'overdue' : 'incomplete';
+  const lines: string[] = [
+    `Task #${task.id}: ${milestoneMarker(task)}${task.title}`,
+    `Status: ${status}`,
+    `Scheduled: ${task.scheduledDate} (${stageForTask(task)} stage)`,
+    `Plan window: ${task.plan.startDate} to ${task.plan.endDate}`,
+  ];
+  if (task.milestone === 'weekly_artifact') {
+    lines.push('Milestone: Flagship deliverable for this stage — the single piece of work that, if this week only produced one thing, this would be it.');
+  }
+  lines.push('');
+  lines.push(`Description: ${task.description}`);
+
+  if (task.deliverable) {
+    lines.push('');
+    lines.push(`Deliverable: ${task.deliverable.title}`);
+    lines.push(`Doc URL: ${task.deliverable.docUrl}`);
+  } else {
+    lines.push('');
+    lines.push('Deliverable: not created yet.');
+  }
+
+  return lines.join('\n');
+}
+
+export function formatSavedDeliverable(result: { docUrl: string }): string {
+  return [
+    'Deliverable created successfully.',
+    `Doc URL: ${result.docUrl}`,
+  ].join('\n');
+}
+
+export function formatUpdatedDeliverable(result: { docUrl: string }): string {
+  return [
+    'Deliverable updated successfully.',
+    `Doc URL: ${result.docUrl}`,
+  ].join('\n');
+}
+
+export function formatReadDeliverable(result: ReadDeliverableResponse): string {
+  return [
+    `Deliverable: ${result.title}`,
+    `Doc URL: ${result.docUrl}`,
+    '',
+    'Markdown:',
+    result.contentMarkdown,
+  ].join('\n');
+}
+
+export function formatDeliverables(result: DeliverableListResponse): string {
+  if (result.deliverables.length === 0) {
+    return 'No deliverables found for this brainlift.';
+  }
+
+  const lines: string[] = [
+    `Deliverables (${result.deliverables.length}):`,
+    `Plans in history: ${result.plans.length}`,
+    '',
+  ];
+
+  for (const item of result.deliverables) {
+    lines.push(`- #${item.id} ${item.scheduledDate} :: ${item.title}`);
+    lines.push(`  Task: ${item.taskTitle} (taskId=${item.taskId}, planId=${item.planId})`);
+    lines.push(`  Doc URL: ${item.docUrl}`);
+    lines.push('');
+  }
+
+  return lines.join('\n');
+}
+
 // ── CRUD formatters ──
 
 export function formatEditResponse(response: EditResponse): string {
@@ -466,7 +705,15 @@ type ToolName =
   | 'get_stale_items'
   | 'dismiss_stale'
   | 'link_dok3'
-  | 'link_dok4';
+  | 'link_dok4'
+  | 'generate_plan'
+  | 'get_plan'
+  | 'list_tasks'
+  | 'get_task'
+  | 'save_deliverable'
+  | 'read_deliverable'
+  | 'update_deliverable'
+  | 'list_deliverables';
 
 export function formatErrorGuidance(message: string, tool: ToolName): string {
   const status = message.match(/API error: (\d{3})/)?.[1];
@@ -500,9 +747,36 @@ export function formatErrorGuidance(message: string, tool: ToolName): string {
         return 'Check your parameters. Common issues: missing required fields, invalid linking IDs, or DOK4 primaryDok3Id not included in linkedDok3Ids. Use get_brainlift_assessment to verify item IDs.';
       case 'dismiss_stale':
         return 'Check your parameters: dok must be 1-4 and itemId must be a valid item ID.';
+      case 'generate_plan':
+        return 'Check your parameters: brainliftSlug must be provided and localDate must be a valid YYYY-MM-DD value.';
+      case 'list_tasks':
+        return 'Check your filters: date/localDate must be YYYY-MM-DD, week must be 1-5, and includePastDue=true requires localDate.';
+      case 'get_task':
+      case 'save_deliverable':
+      case 'read_deliverable':
+      case 'update_deliverable':
+        return 'Check your parameters: brainliftSlug is required and taskId must be a positive integer.';
+      case 'list_deliverables':
+        return 'Check your parameters: brainliftSlug is required and planId (if provided) must be a positive integer.';
       default:
         return 'The request was malformed. Check your parameters and try again.';
     }
+  }
+
+  if (status === '403') {
+    if (
+      tool === 'generate_plan'
+      || tool === 'save_deliverable'
+      || tool === 'update_deliverable'
+      || tool === 'get_plan'
+      || tool === 'list_tasks'
+      || tool === 'get_task'
+      || tool === 'read_deliverable'
+      || tool === 'list_deliverables'
+    ) {
+      return 'Access denied for this brainlift. The authenticated user does not have the required share permission for this operation.';
+    }
+    return 'Access denied. Check that the authenticated user has permission for this resource.';
   }
 
   // 404 -- not found
@@ -516,9 +790,27 @@ export function formatErrorGuidance(message: string, tool: ToolName): string {
         return 'Item not found. Check the slug, dok level, and itemId are correct. Use get_brainlift_assessment to see available items.';
       case 'get_stale_items':
         return 'Brainlift not found. Check the slug is correct -- use list_brainlifts to see your available brainlifts.';
+      case 'get_plan':
+      case 'list_tasks':
+      case 'list_deliverables':
+        return 'Brainlift not found or inaccessible. Check brainliftSlug and user access.';
+      case 'get_task':
+      case 'read_deliverable':
+      case 'update_deliverable':
+        return 'Task or deliverable not found. Check taskId and confirm the task belongs to this brainlift.';
       default:
         return 'Resource not found. Use list_brainlifts to see your available brainlifts.';
     }
+  }
+
+  if (status === '409') {
+    if (tool === 'generate_plan') {
+      return 'An active sprint plan already exists. Use get_plan to inspect the current plan instead of generating a new one.';
+    }
+    if (tool === 'save_deliverable') {
+      return 'A deliverable already exists for this task. Use update_deliverable to modify it.';
+    }
+    return 'Request conflicts with current sprint state. Refresh the relevant plan/task state and retry.';
   }
 
   // 500+ — server error
