@@ -111,6 +111,11 @@ export interface GeneratePlanInput {
   };
 }
 
+export interface CrossBrainliftTaskListItem extends TaskListItem {
+  brainliftSlug: string;
+  brainliftTitle: string;
+}
+
 export interface TaskDetailResponse extends TaskListItem {
   plan: {
     id: number;
@@ -375,6 +380,20 @@ export class DOK1GraderClient {
       `/api/internal/brainlifts/${slug}/tasks${queryString ? `?${queryString}` : ''}`,
     );
     return (await response.json()) as TaskListItem[];
+  }
+
+  /**
+   * List sprint tasks across every brainlift the authenticated user has access to.
+   * Calls GET /api/internal/tasks.
+   */
+  async listAllTasks(query: ListTasksQuery = {}): Promise<CrossBrainliftTaskListItem[]> {
+    const params = toQueryParams(query);
+    const queryString = params.toString();
+    const response = await this.request(
+      'GET',
+      `/api/internal/tasks${queryString ? `?${queryString}` : ''}`,
+    );
+    return (await response.json()) as CrossBrainliftTaskListItem[];
   }
 
   /**
