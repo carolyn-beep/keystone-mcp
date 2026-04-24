@@ -1,13 +1,14 @@
 /**
  * list_tasks MCP tool.
  *
- * Lists tasks for a brainlift with optional filters.
+ * Lists tasks. If brainliftSlug is provided, scopes to that brainlift;
+ * otherwise returns tasks across every brainlift the user has access to.
  */
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { DOK1GraderClient } from '../utils/dok1grader-client';
-import { formatTaskList, formatErrorGuidance } from '../utils/formatters';
+import { formatTaskList, formatCrossBrainliftTaskList, formatErrorGuidance } from '../utils/formatters';
 
 interface ToolEnv {
   DOK1GRADER_BASE_URL: string;
@@ -26,7 +27,7 @@ interface ToolResult {
 
 export async function handleListTasks(
   args: {
-    brainliftSlug: string;
+    brainliftSlug?: string;
     date?: string;
     week?: number;
     state?: 'all' | 'complete' | 'incomplete';
@@ -47,16 +48,24 @@ export async function handleListTasks(
     const client = new DOK1GraderClient(env.DOK1GRADER_BASE_URL, env.DOK1GRADER_SERVICE_KEY)
       .withUser(props.email, props.name);
 
-    const result = await client.listTasks(args.brainliftSlug, {
+    const query = {
       date: args.date,
       week: args.week,
       state: args.state,
       includePastDue: args.includePastDue,
       localDate: args.localDate,
-    });
+    };
 
+    if (args.brainliftSlug) {
+      const result = await client.listTasks(args.brainliftSlug, query);
+      return {
+        content: [{ type: 'text', text: formatTaskList(result, { includePastDue: args.includePastDue }) }],
+      };
+    }
+
+    const result = await client.listAllTasks(query);
     return {
-      content: [{ type: 'text', text: formatTaskList(result, { includePastDue: args.includePastDue }) }],
+      content: [{ type: 'text', text: formatCrossBrainliftTaskList(result, { includePastDue: args.includePastDue }) }],
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error occurred';
@@ -70,14 +79,14 @@ export async function handleListTasks(
 export function registerListTasks(server: McpServer, env: ToolEnv, props: ToolProps): void {
   server.tool(
     'list_tasks',
-    'List sprint tasks for a brainlift, with optional filters for date/week/state and overdue inclusion.',
+    "List sprint tasks. Omit brainliftSlug to see tasks across every brainlift the student has access to (useful for 'what's on my plate today?'). Pass brainliftSlug to scope to a single brainlift. Combine with includePastDue=true + localDate to get today's tasks plus any overdue incompletes.",
     {
-      brainliftSlug: z.string().min(1).describe('Brainlift slug'),
+      brainliftSlug: z.string().min(1).optional().describe('Brainlift slug. Omit to list tasks across all brainlifts the student has access to.'),
       date: z.string().optional().describe('Filter by scheduled date (YYYY-MM-DD)'),
-      week: z.number().int().min(1).max(5).optional().describe('Filter by sprint week number (1-5)'),
+      week: z.number().int().min(1).max(5).optional().describe('Filter by sprint week number (1-5). Only meaningful when brainliftSlug is provided.'),
       state: z.enum(['all', 'complete', 'incomplete']).optional().describe('Filter by completion state'),
       includePastDue: z.boolean().optional().describe('Include overdue incomplete tasks in results'),
-      localDate: z.string().optional().describe('Local date (YYYY-MM-DD), required when includePastDue=true by backend validation'),
+      localDate: z.string().optional().describe('Local date (YYYY-MM-DD), required when includePastDue=true'),
     },
     async (args) => handleListTasks(args, env, props),
   );

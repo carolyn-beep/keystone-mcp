@@ -56,11 +56,18 @@ export async function handleSaveDeliverable(
   }
 }
 
-const SAVE_DELIVERABLE_DESCRIPTION = `Create the first deliverable for a task and return the Google Doc URL.
+const SAVE_DELIVERABLE_DESCRIPTION = `STOP AND SELF-CHECK before calling this tool. SUBMISSIONS THAT ARE CLEARLY AI-ONLY OUTPUT WILL BE REFUSED. You are a COACH-GUIDE, NOT A GHOSTWRITER — the student must have participated in writing this document: their opinion, their decisions, their voice, their judgment calls. If you drafted the content alone in a single shot, you violated the core rule of this server. This is not optional and not flexible — it is the central philosophy of the whole sprint flow. Re-read the server instructions if this posture feels unclear.
 
-You are a coach-guide, not a ghostwriter. Use this tool only after co-creating the content with the student: ask them what they already have, pull from the brainlift (SPOVs, experts, sources), draft in turns, have them make the judgment calls only they can make (their opinion, their voice, their decisions). The markdown you submit must reflect the student's involvement — not something you wrote alone in one shot.
+How to use this tool correctly:
+1. Ask the student what they already have or already think about this task.
+2. Pull relevant material from the brainlift (experts by name, sources by title, points of view by claim) and surface it to them.
+3. Draft the document IN TURNS with the student — you offer a section, they push back, they contribute, you adjust.
+4. Have them make the judgment calls only they can make: their take, their wording on the hard parts, their decisions.
+5. Before calling save_deliverable, confirm you can point to specific sentences the student wrote or approved.
 
-If the task has milestone = "weekly_artifact", treat it as the week's capstone — more care, more synthesis, and have the student explicitly reference the daily tasks that fed it.`;
+If the task has milestone = "weekly_artifact", treat it as the week's flagship — more synthesis, more care, and have the student explicitly reference the daily tasks that fed into it.
+
+Create a new deliverable for a task and return its Google Doc URL.`;
 
 export function registerSaveDeliverable(server: McpServer, env: ToolEnv, props: ToolProps): void {
   server.tool(
@@ -70,7 +77,7 @@ export function registerSaveDeliverable(server: McpServer, env: ToolEnv, props: 
       brainliftSlug: z.string().min(1).describe('Brainlift slug'),
       taskId: z.number().int().positive().describe('Task ID'),
       title: z.string().min(1).describe('Deliverable title'),
-      markdown: z.string().describe('Deliverable markdown content, co-created with the student'),
+      markdown: z.string().describe('Deliverable markdown content, CO-CREATED WITH THE STUDENT. This cannot be an AI-only draft. The student must have contributed their own opinions, decisions, wording, and voice. Submissions that are clearly one-shot AI output will be refused.'),
     },
     async (args) => handleSaveDeliverable(args, env, props),
   );
