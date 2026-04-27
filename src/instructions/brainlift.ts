@@ -21,6 +21,11 @@ When creating a NEW Brainlift from scratch, follow these for best results:
 - The grader penalizes padding, copy-paste, redundancy, and weak source tracing.
 - DOK4 SPOVs that are observations (not positions) get rejected outright.
 
+Experts for NEW Brainlifts:
+- Include an '## Experts' section when you author a fresh brainlift. The parser is strict elsewhere, so read the template carefully before you write.
+- For each expert, include 'name', 'who', and 'why'. Those are the core fields.
+- Add 'focus' and 'where' when you have them. 'where' is especially useful for handles such as '@hubermanlab'.
+
 When working with an EXISTING Brainlift the user brings to you:
 - The user has invested in this content and values it. Do light curation -- remove genuine redundancies, drop padding, flag insights that don't add much, note sources that seem stale -- but do NOT aggressively cut or restructure. Losing important content will upset the user.
 - Bigger Brainlifts take longer to grade. Mention that tradeoff if relevant, but don't force a trim.
