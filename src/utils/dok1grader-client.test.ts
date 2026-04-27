@@ -99,7 +99,7 @@ describe('DOK1GraderClient CRUD methods', () => {
   // ── createDok1 ──
 
   describe('createDok1', () => {
-    it('sends POST to /dok/dok1 with fact, source, category', async () => {
+    it('sends POST to /dok1 with fact, source, category', async () => {
       mockFetch.mockResolvedValueOnce(okJson({ id: 100, status: 'grading' }));
 
       const result = await client.createDok1('my-slug', {
@@ -107,7 +107,7 @@ describe('DOK1GraderClient CRUD methods', () => {
       });
 
       const [url, init] = mockFetch.mock.calls[0];
-      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/dok/dok1');
+      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/dok1');
       expect(init.method).toBe('POST');
       expect(JSON.parse(init.body)).toEqual({
         fact: 'Water boils at 100C', source: 'Physics textbook', category: 'Science',
@@ -119,7 +119,7 @@ describe('DOK1GraderClient CRUD methods', () => {
   // ── createDok2 ──
 
   describe('createDok2', () => {
-    it('sends POST to /dok/dok2 with points and relatedFactIds', async () => {
+    it('sends POST to /dok2 with points and relatedFactIds', async () => {
       mockFetch.mockResolvedValueOnce(okJson({ id: 50, status: 'grading' }));
 
       await client.createDok2('my-slug', {
@@ -128,7 +128,7 @@ describe('DOK1GraderClient CRUD methods', () => {
       });
 
       const [url, init] = mockFetch.mock.calls[0];
-      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/dok/dok2');
+      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/dok2');
       expect(init.method).toBe('POST');
       const body = JSON.parse(init.body);
       expect(body.points).toEqual(['Point 1', 'Point 2']);
@@ -139,7 +139,7 @@ describe('DOK1GraderClient CRUD methods', () => {
   // ── createDok3 ──
 
   describe('createDok3', () => {
-    it('sends POST to /dok/dok3 with text and linkedDok2Ids', async () => {
+    it('sends POST to /dok3 with text and linkedDok2Ids', async () => {
       mockFetch.mockResolvedValueOnce(okJson({ id: 30, status: 'grading' }));
 
       await client.createDok3('my-slug', {
@@ -147,7 +147,7 @@ describe('DOK1GraderClient CRUD methods', () => {
       });
 
       const [url, init] = mockFetch.mock.calls[0];
-      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/dok/dok3');
+      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/dok3');
       expect(JSON.parse(init.body)).toEqual({
         text: 'Cross-source insight', linkedDok2Ids: [10, 15],
       });
@@ -157,7 +157,7 @@ describe('DOK1GraderClient CRUD methods', () => {
   // ── createDok4 ──
 
   describe('createDok4', () => {
-    it('sends POST to /dok/dok4 with text, linkedDok3Ids, and primaryDok3Id', async () => {
+    it('sends POST to /dok4 with text, linkedDok3Ids, and primaryDok3Id', async () => {
       mockFetch.mockResolvedValueOnce(okJson({ id: 20, status: 'grading' }));
 
       await client.createDok4('my-slug', {
@@ -165,10 +165,96 @@ describe('DOK1GraderClient CRUD methods', () => {
       });
 
       const [url, init] = mockFetch.mock.calls[0];
-      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/dok/dok4');
+      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/dok4');
       const body = JSON.parse(init.body);
       expect(body.linkedDok3Ids).toEqual([30, 31]);
       expect(body.primaryDok3Id).toBe(30);
+    });
+  });
+
+  // ── expert methods ──
+
+  describe('listExperts', () => {
+    it('sends GET to the internal experts endpoint', async () => {
+      mockFetch.mockResolvedValueOnce(okJson([
+        {
+          id: 10,
+          name: 'Andrew Huberman',
+          who: 'Stanford neuroscientist',
+          why: 'Grounds the neuroscience angle',
+          focus: 'sleep',
+          where: '@hubermanlab',
+          rankScore: 4.3,
+          rationale: 'High relevance',
+          twitterHandle: 'hubermanlab',
+          source: 'manual',
+          isFollowing: false,
+        },
+      ]));
+
+      const result = await client.listExperts('my-slug');
+
+      const [url, init] = mockFetch.mock.calls[0];
+      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/experts');
+      expect(init.method).toBe('GET');
+      expect(result[0].id).toBe(10);
+    });
+  });
+
+  describe('createExperts', () => {
+    it('sends POST to the internal experts endpoint with batch payload', async () => {
+      mockFetch.mockResolvedValueOnce(okJson([
+        {
+          id: 11,
+          name: 'Cal Newport',
+          who: 'Computer science professor',
+          why: 'Frames deep work tradeoffs',
+          focus: null,
+          where: '@CalNewportMedia',
+          rankScore: null,
+          rationale: null,
+          twitterHandle: 'CalNewportMedia',
+          source: 'manual',
+          isFollowing: false,
+        },
+      ]));
+
+      const result = await client.createExperts('my-slug', [
+        {
+          name: 'Cal Newport',
+          who: 'Computer science professor',
+          why: 'Frames deep work tradeoffs',
+          where: '@CalNewportMedia',
+        },
+      ]);
+
+      const [url, init] = mockFetch.mock.calls[0];
+      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/experts');
+      expect(init.method).toBe('POST');
+      expect(JSON.parse(init.body)).toEqual({
+        experts: [
+          {
+            name: 'Cal Newport',
+            who: 'Computer science professor',
+            why: 'Frames deep work tradeoffs',
+            where: '@CalNewportMedia',
+          },
+        ],
+      });
+      expect(result[0].id).toBe(11);
+    });
+  });
+
+  describe('deleteExpert', () => {
+    it('sends DELETE to the internal experts item endpoint', async () => {
+      mockFetch.mockResolvedValueOnce(new Response(null, { status: 204 }));
+
+      await client.deleteExpert('my-slug', 12);
+
+      const [url, init] = mockFetch.mock.calls[0];
+      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/experts/12');
+      expect(init.method).toBe('DELETE');
+      expect(init.body).toBeUndefined();
     });
   });
 
@@ -193,15 +279,15 @@ describe('DOK1GraderClient CRUD methods', () => {
   // ── dismissStale ──
 
   describe('dismissStale', () => {
-    it('sends POST to /dismiss-stale with dok and itemId', async () => {
+    it('sends POST to the item dismiss-stale endpoint', async () => {
       mockFetch.mockResolvedValueOnce(okJson({ dismissed: true }));
 
       await client.dismissStale('my-slug', 2, 10);
 
       const [url, init] = mockFetch.mock.calls[0];
-      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/dismiss-stale');
+      expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/dok/2/items/10/dismiss-stale');
       expect(init.method).toBe('POST');
-      expect(JSON.parse(init.body)).toEqual({ dok: 2, itemId: 10 });
+      expect(init.body).toBeUndefined();
     });
   });
 

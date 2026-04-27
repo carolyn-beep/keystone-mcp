@@ -7,6 +7,9 @@
 
 import { describe, it, expect } from 'vitest';
 import {
+  formatExpertsList,
+  formatCreatedExperts,
+  formatDeletedExpert,
   formatEditResponse,
   formatDeletePreview,
   formatDeleteResult,
@@ -45,14 +48,20 @@ describe('formatDeletePreview', () => {
   it('includes item details, impact, and confirmation instructions', () => {
     const result = formatDeletePreview({
       item: { id: 42, text: 'Water boils at 100C', score: 4 },
-      impact: { unlinked: 2, markedStale: 3, details: ['DOK2 #10 unlinked', 'DOK2 #15 unlinked'] },
+      unlinkedItems: [
+        { id: 10, dokLevel: 2, text: 'Summary A' },
+        { id: 15, dokLevel: 2, text: 'Summary B' },
+      ],
+      staleDok2Ids: [10, 15],
+      staleDok3Ids: [30],
+      staleDok4Ids: [],
     });
 
     expect(result).toContain('42');
     expect(result).toContain('Water boils at 100C');
     expect(result).toContain('2');  // unlinked
     expect(result).toContain('3');  // markedStale
-    expect(result).toContain('DOK2 #10 unlinked');
+    expect(result).toContain('DOK2 #10');
     expect(result).toContain('confirm=true');
   });
 });
@@ -60,7 +69,7 @@ describe('formatDeletePreview', () => {
 describe('formatDeleteResult', () => {
   it('confirms deletion with impact summary', () => {
     const result = formatDeleteResult({
-      deleted: true, impact: { unlinked: 2, markedStale: 3 },
+      deleted: true, impactSummary: { unlinked: 2, markedStale: 3 },
     });
 
     expect(result).toContain('Deleted');
@@ -84,7 +93,7 @@ describe('formatStaleItems', () => {
   it('groups items by DOK level with reasons', () => {
     const result = formatStaleItems({
       dok1: [],
-      dok2: [{ id: 10, displayTitle: 'Summary A', staleReason: 'DOK1 #42 was edited' }],
+      dok2: [{ id: 10, text: 'Summary A', staleReason: 'DOK1 #42 was edited' }],
       dok3: [{ id: 30, text: 'Insight X', staleReason: 'linked DOK2 #10 is stale' }],
       dok4: [],
     });
@@ -113,6 +122,68 @@ describe('formatDismissStale', () => {
   });
 });
 
+describe('expert formatters', () => {
+  it('formats expert list with structured fields and rank guidance', () => {
+    const result = formatExpertsList([
+      {
+        id: 12,
+        name: 'Andrew Huberman',
+        who: 'Stanford neuroscientist',
+        why: 'Explains the sleep mechanisms',
+        focus: 'sleep',
+        where: '@hubermanlab',
+        rankScore: 4.25,
+        rationale: 'Highly relevant to the topic',
+        twitterHandle: 'hubermanlab',
+        source: 'manual',
+        isFollowing: false,
+      },
+    ]);
+
+    expect(result).toContain('Andrew Huberman');
+    expect(result).toContain('Stanford neuroscientist');
+    expect(result).toContain('4.25');
+    expect(result).toContain('sleep');
+    expect(result).toContain('Use the expert ID');
+  });
+
+  it('handles an empty expert list', () => {
+    const result = formatExpertsList([]);
+    expect(result).toContain('No experts found');
+    expect(result).toContain('create_expert');
+  });
+
+  it('formats created experts with async rerank guidance', () => {
+    const result = formatCreatedExperts([
+      {
+        id: 13,
+        name: 'Cal Newport',
+        who: 'Computer science professor',
+        why: 'Frames attention and focus tradeoffs',
+        focus: null,
+        where: '@CalNewportMedia',
+        rankScore: null,
+        rationale: null,
+        twitterHandle: 'CalNewportMedia',
+        source: 'manual',
+        isFollowing: false,
+      },
+    ]);
+
+    expect(result).toContain('Created 1 expert');
+    expect(result).toContain('Cal Newport');
+    expect(result).toContain('Ranking refresh has been queued asynchronously');
+    expect(result).toContain('list_experts');
+  });
+
+  it('formats deleted expert confirmation with follow-up guidance', () => {
+    const result = formatDeletedExpert(44);
+    expect(result).toContain('44');
+    expect(result).toContain('list_experts');
+    expect(result).toContain('queued asynchronously');
+  });
+});
+
 describe('formatErrorGuidance for CRUD tools', () => {
   it('accepts edit_dok_item tool name', () => {
     const result = formatErrorGuidance('API error: 400 - Invalid text', 'edit_dok_item');
@@ -138,5 +209,11 @@ describe('formatErrorGuidance for CRUD tools', () => {
   it('accepts get_stale_items and dismiss_stale tool names', () => {
     expect(formatErrorGuidance('API error: 404', 'get_stale_items')).toBeTruthy();
     expect(formatErrorGuidance('API error: 400', 'dismiss_stale')).toBeTruthy();
+  });
+
+  it('accepts expert tool names', () => {
+    expect(formatErrorGuidance('API error: 400 - Bad request', 'create_expert')).toContain('name, who, and why');
+    expect(formatErrorGuidance('API error: 404 - Not found', 'delete_expert')).toContain('list_experts');
+    expect(formatErrorGuidance('API error: 404 - Not found', 'list_experts')).toContain('Brainlift not found');
   });
 });

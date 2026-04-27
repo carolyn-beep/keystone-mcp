@@ -10,6 +10,7 @@ import type {
   ListBrainliftsResponse,
   StatusResponse,
   Pagination,
+  ExpertRecord,
   EditResponse,
   DeletePreviewResponse,
   DeleteResultResponse,
@@ -636,6 +637,60 @@ export function formatDeliverables(result: DeliverableListResponse): string {
   return lines.join('\n');
 }
 
+// ── Expert formatters ──
+
+export function formatExpertsList(experts: ExpertRecord[]): string {
+  if (experts.length === 0) {
+    return [
+      'No experts found for this brainlift.',
+      'If this is a fresh brainlift, add experts with create_expert or submit a new grading pass with an Experts section in the markdown.',
+    ].join('\n');
+  }
+
+  const lines: string[] = [`Experts (${experts.length}):`, ''];
+
+  for (const expert of experts) {
+    const rank = expert.rankScore !== null ? `Rank: ${expert.rankScore.toFixed(2)}` : 'Rank: pending rerank';
+    lines.push(`- [ID: ${expert.id}] ${expert.name} | ${rank}`);
+    if (expert.who) lines.push(`  Who: ${expert.who}`);
+    if (expert.why) lines.push(`  Why: ${expert.why}`);
+    if (expert.focus) lines.push(`  Focus: ${expert.focus}`);
+    if (expert.where) lines.push(`  Where: ${expert.where}`);
+    if (expert.twitterHandle) lines.push(`  Twitter: ${expert.twitterHandle}`);
+    if (expert.rationale) lines.push(`  Rationale: ${expert.rationale}`);
+    lines.push(`  Source: ${expert.source} | Following: ${expert.isFollowing ? 'yes' : 'no'}`);
+    lines.push('');
+  }
+
+  lines.push('Use the expert ID from this list if you need to delete one.');
+  return lines.join('\n');
+}
+
+export function formatCreatedExperts(experts: ExpertRecord[]): string {
+  const lines: string[] = [
+    `Created ${experts.length} expert${experts.length === 1 ? '' : 's'}.`,
+    '',
+  ];
+
+  for (const expert of experts) {
+    lines.push(`- [ID: ${expert.id}] ${expert.name}`);
+  }
+
+  lines.push('');
+  lines.push('Ranking refresh has been queued asynchronously. New experts may show null rankScore or move in the ordering once rerank finishes.');
+  lines.push('Next step: call list_experts with the same slug if you need the updated ranking.');
+
+  return lines.join('\n');
+}
+
+export function formatDeletedExpert(expertId: number): string {
+  return [
+    `Deleted expert #${expertId}.`,
+    'Ranking refresh has been queued asynchronously for the remaining experts.',
+    'Next step: call list_experts with the same slug if you need the updated ordering.',
+  ].join('\n');
+}
+
 // ── CRUD formatters ──
 
 export function formatEditResponse(response: EditResponse): string {
@@ -767,6 +822,9 @@ type ToolName =
   | 'grade_brainlift'
   | 'list_brainlifts'
   | 'get_brainlift_assessment'
+  | 'list_experts'
+  | 'create_expert'
+  | 'delete_expert'
   | 'edit_dok_item'
   | 'delete_dok_item'
   | 'create_dok1'
@@ -811,6 +869,10 @@ export function formatErrorGuidance(message: string, tool: ToolName): string {
         return 'Check your parameters: dok must be 1-4, itemId must be a valid item ID, and text must not be empty.';
       case 'delete_dok_item':
         return 'Check your parameters: dok must be 1-4 and itemId must be a valid item ID.';
+      case 'create_expert':
+        return 'Check your parameters: slug must be valid and experts must include at least one entry with name, who, and why.';
+      case 'delete_expert':
+        return 'Check your parameters: slug must be valid and expertId must be a numeric ID returned by list_experts.';
       case 'create_dok1':
       case 'create_dok2':
       case 'create_dok3':
@@ -855,6 +917,11 @@ export function formatErrorGuidance(message: string, tool: ToolName): string {
     switch (tool) {
       case 'get_brainlift_assessment':
         return 'Brainlift not found. Check the slug is correct — use list_brainlifts to see your available brainlifts and their slugs.';
+      case 'list_experts':
+      case 'create_expert':
+        return 'Brainlift not found. Check the slug is correct — use list_brainlifts to see your available brainlifts and their slugs.';
+      case 'delete_expert':
+        return 'Expert or brainlift not found. Re-run list_experts to confirm the slug and current expert IDs.';
       case 'edit_dok_item':
       case 'delete_dok_item':
       case 'dismiss_stale':

@@ -70,6 +70,28 @@ export interface AssessmentResponse {
   pagination: Pagination;
 }
 
+export interface ExpertRecord {
+  id: number;
+  name: string;
+  who: string | null;
+  why: string | null;
+  focus: string | null;
+  where: string | null;
+  rankScore: number | null;
+  rationale: string | null;
+  twitterHandle: string | null;
+  source: string;
+  isFollowing: boolean;
+}
+
+export interface ExpertInput {
+  name: string;
+  who: string;
+  why: string;
+  focus?: string;
+  where?: string;
+}
+
 // ── Scope Breaker sprint types ──
 
 export interface PlanHistoryItem {
@@ -334,6 +356,42 @@ export class DOK1GraderClient {
       `/api/internal/brainlifts/${slug}/assessment?${params.toString()}`,
     );
     return (await response.json()) as AssessmentResponse;
+  }
+
+  /**
+   * List all experts for a brainlift.
+   * Calls GET /api/internal/brainlifts/:slug/experts.
+   */
+  async listExperts(slug: string): Promise<ExpertRecord[]> {
+    const response = await this.request(
+      'GET',
+      `/api/internal/brainlifts/${slug}/experts`,
+    );
+    return (await response.json()) as ExpertRecord[];
+  }
+
+  /**
+   * Create one or more experts for a brainlift.
+   * Calls POST /api/internal/brainlifts/:slug/experts.
+   */
+  async createExperts(slug: string, experts: ExpertInput[]): Promise<ExpertRecord[]> {
+    const response = await this.request(
+      'POST',
+      `/api/internal/brainlifts/${slug}/experts`,
+      { experts },
+    );
+    return (await response.json()) as ExpertRecord[];
+  }
+
+  /**
+   * Delete one expert from a brainlift.
+   * Calls DELETE /api/internal/brainlifts/:slug/experts/:id.
+   */
+  async deleteExpert(slug: string, expertId: number): Promise<void> {
+    await this.request(
+      'DELETE',
+      `/api/internal/brainlifts/${slug}/experts/${expertId}`,
+    );
   }
 
   // ── Scope Breaker sprint methods ──
