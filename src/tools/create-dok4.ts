@@ -62,10 +62,10 @@ export async function handleCreateDok4(
 export function registerCreateDok4(server: McpServer, env: ToolEnv, props: ToolProps): void {
   server.tool(
     'create_dok4',
-    'Add a new DOK4 SPOV (Spiky Point of View) to an existing brainlift. Review quality guidelines from get_template first. A SPOV must be a defensible POSITION where informed people disagree -- observations get rejected outright. Linked DOK3 insights must be in "graded" status. Triggers async grading pipeline. Poll get_brainlift_assessment to check when grading completes.',
+    "Add a new DOK4 SPOV (Spiky Point of View) to an existing brainlift. A SPOV is a single punchy line that takes a side; observations and hedged takes get rejected. Review quality guidelines from get_template first. Linked DOK3 insights must be in 'graded' status. Triggers async grading; poll get_brainlift_assessment to check completion.",
     {
       slug: z.string().describe('Brainlift slug'),
-      text: z.string().describe('A spiky point of view -- a defensible, possibly contrarian position (NOT an observation). Must be something where informed people would disagree.'),
+      text: z.string().describe('A single punchy, quotable line that takes a side. Not a paragraph, not a hedged take. The DOK1-2-3 chain is the justification; the SPOV itself does not explain itself.'),
       linkedDok3Ids: z.array(z.number()).min(1).describe('IDs of DOK3 insights supporting this SPOV (must be graded, not pending)'),
       primaryDok3Id: z.number().describe('ID of the primary DOK3 insight (must be in linkedDok3Ids)'),
     },

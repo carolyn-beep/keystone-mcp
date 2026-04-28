@@ -57,7 +57,7 @@ export async function handleLinkDok4(
 export function registerLinkDok4(server: McpServer, env: ToolEnv, props: ToolProps): void {
   server.tool(
     'link_dok4',
-    'Attach additional DOK3 insights to an existing DOK4 SPOV to strengthen its analytical foundation. Use this when the grading feedback says the SPOV needs broader support or more cross-source evidence -- go build new DOK3 insights first, then link them here. This preserves the SPOV\'s version history and feedback continuity (unlike delete + recreate). Triggers an automatic regrade so the score reflects the expanded foundation. The SPOV text stays the same -- only the supporting insights change. Optionally update which DOK3 is the primary insight. Ensure the DOK3s are fully graded (not grading or regrading) before linking to avoid failures.',
+    "Attach additional DOK3 insights to an existing DOK4 SPOV when the SPOV's grounding is weak (S3 Grounded & Traceable). Use this when grading feedback says the chain does not actually support the leap to this position; go build new DOK3 insights first, then link them here. This preserves the SPOV's version history and feedback continuity (unlike delete + recreate). Triggers an automatic regrade. The SPOV text stays the same; only the supporting chain changes. Optionally update the primary DOK3. Ensure the new DOK3s are fully graded (not grading or regrading) before linking to avoid failures.",
     {
       slug: z.string().describe('Brainlift slug'),
       spovId: z.number().int().describe('ID of the existing DOK4 SPOV (from get_brainlift_assessment)'),

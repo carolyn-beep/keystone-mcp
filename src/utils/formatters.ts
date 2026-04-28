@@ -24,6 +24,10 @@ import type {
   ReadDeliverableResponse,
   DeliverableListResponse,
 } from './dok1grader-client';
+import { labelForCriterion } from './criteria-labels';
+
+const S2_DIVERGENCE_NUDGE =
+  'S2 (LLM Divergence) measures whether the SPOV diverges from this vanilla LLM answer in a substantive way: commits where it hedges, names a trade-off it misses. Stylistic difference alone is not enough.';
 
 // ── Grade response ──
 
@@ -283,7 +287,12 @@ export function formatAssessmentDOK4(
         lines.push('   Criteria Breakdown:');
         for (const [key, value] of Object.entries(item.criteriaBreakdown)) {
           const v = value as any;
-          lines.push(`     ${key}: ${v.assessment || v.score || JSON.stringify(v)}`);
+          const label = labelForCriterion(key, 4);
+          const verdict = v.assessment || v.score || JSON.stringify(v);
+          lines.push(`     ${label}: ${verdict}`);
+          if (v.evidence) {
+            lines.push(`       ${v.evidence}`);
+          }
         }
       }
       if (item.antimemeticAssessment) {
@@ -292,14 +301,14 @@ export function formatAssessmentDOK4(
       if (item.positionSummary) {
         lines.push(`   Position Summary: ${item.positionSummary}`);
       }
-      if (item.vulnerabilityPoints && item.vulnerabilityPoints.length > 0) {
-        lines.push(`   Vulnerability Points: ${item.vulnerabilityPoints.join('; ')}`);
-      }
       if (item.divergenceQuestion) {
         lines.push(`   Divergence Question: ${item.divergenceQuestion}`);
       }
       if (item.divergenceVanillaResponse) {
         lines.push(`   Divergence Vanilla Response: ${item.divergenceVanillaResponse}`);
+      }
+      if (item.divergenceQuestion && item.divergenceVanillaResponse) {
+        lines.push(`   ${S2_DIVERGENCE_NUDGE}`);
       }
     }
 

@@ -276,7 +276,7 @@ describe('formatAssessmentDOK4', () => {
     expect(result).toContain('not a position');
   });
 
-  it('includes full detail fields', () => {
+  it('renders v2 criteria breakdown with labels and evidence lines', () => {
     const result = formatAssessmentDOK4(
       {
         items: [
@@ -285,13 +285,19 @@ describe('formatAssessmentDOK4', () => {
             rationale: 'Excellent', feedback: 'Original',
             rejectionReason: null, rejectionCategory: null,
             linkedInsights: ['I1'],
-            criteriaSummary: 'spikiness: Excellent',
-            criteriaBreakdown: { spikiness: { assessment: 'Excellent', score: 5 } },
+            criteriaSummary: 'S1 (Contested): strong; P1 (Punchiness): weak',
+            criteriaBreakdown: {
+              S1: { assessment: 'strong', evidence: 'Practitioners take genuinely different sides.' },
+              S4: { assessment: 'strong', evidence: 'Names a clear side.' },
+              P1: { assessment: 'weak', evidence: 'Two sentences with parenthetical hedging.' },
+              S2: { assessment: 'strong', evidence: 'Commits where vanilla LLM hedges.' },
+              S3: { assessment: 'strong', evidence: 'Cites three sources directly.' },
+              O2: { assessment: 'strong', evidence: 'Voice is recognizably the author.' },
+            },
             antimemeticAssessment: 'Hard to forget',
             positionSummary: 'A bold claim',
-            vulnerabilityPoints: ['Could be challenged on X'],
             divergenceQuestion: 'What would mainstream say?',
-            divergenceVanillaResponse: 'Mainstream would disagree',
+            divergenceVanillaResponse: 'Mainstream would hedge.',
           },
         ],
         pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
@@ -300,10 +306,153 @@ describe('formatAssessmentDOK4', () => {
     );
 
     expect(result).toContain('Criteria Breakdown');
+    expect(result).toContain('S1 (Contested): strong');
+    expect(result).toContain('P1 (Punchiness): weak');
+    expect(result).toContain('S2 (LLM Divergence): strong');
+    expect(result).toContain('S3 (Grounded & Traceable): strong');
+    expect(result).toContain('O2 (Distinct Voice): strong');
+    // Evidence rendered on a second indented line beneath each row.
+    expect(result).toContain('Practitioners take genuinely different sides.');
+    expect(result).toContain('Two sentences with parenthetical hedging.');
     expect(result).toContain('Antimemetic Assessment');
     expect(result).toContain('Position Summary');
-    expect(result).toContain('Vulnerability Points');
     expect(result).toContain('Divergence');
+  });
+
+  it('does not render Vulnerability Points even when payload includes the field', () => {
+    const result = formatAssessmentDOK4(
+      {
+        items: [
+          {
+            id: 1, text: 'SPOV', status: 'graded', score: 5,
+            rationale: 'r', feedback: 'f',
+            rejectionReason: null, rejectionCategory: null,
+            linkedInsights: [],
+            criteriaSummary: null,
+            criteriaBreakdown: { S1: { assessment: 'strong', evidence: 'e' } },
+            // Legacy field still on the wire pre-spec-07. Formatter must ignore it.
+            vulnerabilityPoints: ['old data point'],
+          },
+        ],
+        pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+      },
+      'full',
+    );
+
+    expect(result).not.toContain('Vulnerability Points');
+    expect(result).not.toContain('old data point');
+  });
+
+  it('annotates legacy criteria keys with [legacy]', () => {
+    const result = formatAssessmentDOK4(
+      {
+        items: [
+          {
+            id: 1, text: 'SPOV', status: 'graded', score: 4,
+            rationale: 'r', feedback: 'f',
+            rejectionReason: null, rejectionCategory: null,
+            linkedInsights: [],
+            criteriaSummary: null,
+            criteriaBreakdown: {
+              S5: { assessment: 'partial', evidence: 'Synthesizes two domains.' },
+              O1: { assessment: 'weak', evidence: 'Causal chain not made explicit.' },
+            },
+          },
+        ],
+        pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+      },
+      'full',
+    );
+
+    expect(result).toContain('S5 (Cross-Domain Synthesis [legacy]): partial');
+    expect(result).toContain('O1 (Causal Reasoning [legacy]): weak');
+  });
+
+  it('appends S2 interpretive nudge when both divergence fields are present', () => {
+    const result = formatAssessmentDOK4(
+      {
+        items: [
+          {
+            id: 1, text: 'SPOV', status: 'graded', score: 5,
+            rationale: 'r', feedback: 'f',
+            rejectionReason: null, rejectionCategory: null,
+            linkedInsights: [],
+            criteriaSummary: null,
+            divergenceQuestion: 'Q',
+            divergenceVanillaResponse: 'A',
+          },
+        ],
+        pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+      },
+      'full',
+    );
+
+    expect(result).toContain('S2 (LLM Divergence) measures whether the SPOV diverges');
+    expect(result).toContain('Stylistic difference alone is not enough.');
+  });
+
+  it('omits S2 nudge when only divergenceQuestion is present', () => {
+    const result = formatAssessmentDOK4(
+      {
+        items: [
+          {
+            id: 1, text: 'SPOV', status: 'graded', score: 5,
+            rationale: 'r', feedback: 'f',
+            rejectionReason: null, rejectionCategory: null,
+            linkedInsights: [],
+            criteriaSummary: null,
+            divergenceQuestion: 'Q',
+          },
+        ],
+        pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+      },
+      'full',
+    );
+
+    expect(result).not.toContain('S2 (LLM Divergence) measures');
+  });
+
+  it('omits S2 nudge when only divergenceVanillaResponse is present', () => {
+    const result = formatAssessmentDOK4(
+      {
+        items: [
+          {
+            id: 1, text: 'SPOV', status: 'graded', score: 5,
+            rationale: 'r', feedback: 'f',
+            rejectionReason: null, rejectionCategory: null,
+            linkedInsights: [],
+            criteriaSummary: null,
+            divergenceVanillaResponse: 'A',
+          },
+        ],
+        pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+      },
+      'full',
+    );
+
+    expect(result).not.toContain('S2 (LLM Divergence) measures');
+  });
+
+  it('omits S2 nudge in summary detail mode even when both fields present', () => {
+    const result = formatAssessmentDOK4(
+      {
+        items: [
+          {
+            id: 1, text: 'SPOV', status: 'graded', score: 5,
+            rationale: 'r', feedback: 'f',
+            rejectionReason: null, rejectionCategory: null,
+            linkedInsights: [],
+            criteriaSummary: null,
+            divergenceQuestion: 'Q',
+            divergenceVanillaResponse: 'A',
+          },
+        ],
+        pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+      },
+      'summary',
+    );
+
+    expect(result).not.toContain('S2 (LLM Divergence) measures');
   });
 });
 
