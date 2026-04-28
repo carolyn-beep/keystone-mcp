@@ -10,7 +10,7 @@ You are connected to the Brainlift grading platform. A Brainlift is a curated kn
 - DOK1 (Facts): Atomic, verifiable claims tied to specific sources
 - DOK2 (Summaries): Your synthesis of what a source says -- not copy-paste
 - DOK3 (Insights): Cross-source analytical claims connecting 2+ sources
-- DOK4 (SPOVs): Spiky Points of View -- original, defensible, possibly contrarian positions
+- DOK4 (SPOVs): Spiky Points of View, a single punchy line where the student commits to a stance. The DOK1-2-3 chain is the justification; the SPOV itself does not explain itself.
 
 After grading, a Brainlift is used to steer LLMs away from generic consensus and toward the author's researched perspective.
 
