@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DOK1GraderClient } from './dok1grader-client';
+import { DOK1GraderClient, normalizeAiWritingSignal, transformAssessmentItem } from './dok1grader-client';
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -302,5 +302,167 @@ describe('DOK1GraderClient CRUD methods', () => {
       expect(init.method).toBe('PATCH');
       expect(init.body).toBeDefined();
     });
+  });
+
+  // ── AI Writing Signal transform on getAssessment (Spec 04) ──
+
+  describe('getAssessment AI Writing Signal transform', () => {
+    function assessmentBody(dok: number, items: object[]) {
+      return {
+        slug: 'my-slug',
+        dok,
+        status: 'complete',
+        items,
+        pagination: { page: 1, pageSize: 10, totalItems: items.length, totalPages: 1 },
+      };
+    }
+
+    it('transforms camelCase aiWritingSignal to snake_case ai_writing_signal on DOK3 items', async () => {
+      mockFetch.mockResolvedValueOnce(okJson(assessmentBody(3, [
+        { id: 1, text: 'Insight A', aiWritingSignal: 'Human' },
+        { id: 2, text: 'Insight B', aiWritingSignal: 'AI-Assisted' },
+        { id: 3, text: 'Insight C', aiWritingSignal: 'Mixed' },
+        { id: 4, text: 'Insight D', aiWritingSignal: 'AI' },
+      ])));
+
+      const result = await client.getAssessment('my-slug', 3, 1, 10);
+
+      expect(result.items).toHaveLength(4);
+      expect(result.items[0].ai_writing_signal).toBe('human');
+      expect(result.items[1].ai_writing_signal).toBe('ai-assisted');
+      expect(result.items[2].ai_writing_signal).toBe('mixed');
+      expect(result.items[3].ai_writing_signal).toBe('ai');
+      // camelCase form is stripped at the boundary
+      expect(result.items[0].aiWritingSignal).toBeUndefined();
+    });
+
+    it('transforms on DOK2 items', async () => {
+      mockFetch.mockResolvedValueOnce(okJson(assessmentBody(2, [
+        { id: 10, displayTitle: 'Summary', aiWritingSignal: 'Human' },
+      ])));
+
+      const result = await client.getAssessment('my-slug', 2, 1, 10);
+      expect(result.items[0].ai_writing_signal).toBe('human');
+    });
+
+    it('transforms on DOK4 items', async () => {
+      mockFetch.mockResolvedValueOnce(okJson(assessmentBody(4, [
+        { id: 20, text: 'SPOV', aiWritingSignal: 'AI' },
+      ])));
+
+      const result = await client.getAssessment('my-slug', 4, 1, 10);
+      expect(result.items[0].ai_writing_signal).toBe('ai');
+    });
+
+    it('deserializes missing field as ai_writing_signal: null (pre-Spec-01 / pre-launch items)', async () => {
+      mockFetch.mockResolvedValueOnce(okJson(assessmentBody(3, [
+        { id: 1, text: 'Insight with no signal field at all' },
+      ])));
+
+      const result = await client.getAssessment('my-slug', 3, 1, 10);
+      expect(result.items[0].ai_writing_signal).toBeNull();
+    });
+
+    it('deserializes explicit null as ai_writing_signal: null (in-progress / errored analysis)', async () => {
+      mockFetch.mockResolvedValueOnce(okJson(assessmentBody(3, [
+        { id: 1, text: 'In-progress', aiWritingSignal: null },
+      ])));
+
+      const result = await client.getAssessment('my-slug', 3, 1, 10);
+      expect(result.items[0].ai_writing_signal).toBeNull();
+    });
+
+    it('deserializes unknown future label as null (forward-compatible, no crash)', async () => {
+      mockFetch.mockResolvedValueOnce(okJson(assessmentBody(3, [
+        { id: 1, text: 'Future bucket', aiWritingSignal: 'Hyper-Synthetic' },
+      ])));
+
+      const result = await client.getAssessment('my-slug', 3, 1, 10);
+      expect(result.items[0].ai_writing_signal).toBeNull();
+    });
+
+    it('does NOT transform DOK1 items (DOK1 is not analyzed per decisions §1)', async () => {
+      // DOK1 items pass through verbatim. If the API ever included aiWritingSignal
+      // on a DOK1 item by mistake, we leave it alone so it is not silently hidden.
+      mockFetch.mockResolvedValueOnce(okJson(assessmentBody(1, [
+        { id: 1, fact: 'Water boils at 100C', aiWritingSignal: 'Human' },
+      ])));
+
+      const result = await client.getAssessment('my-slug', 1, 1, 10);
+      expect(result.items[0]).not.toHaveProperty('ai_writing_signal');
+      // The raw camelCase passes through untouched on DOK1
+      expect(result.items[0].aiWritingSignal).toBe('Human');
+    });
+
+    it('preserves other item fields during transform', async () => {
+      mockFetch.mockResolvedValueOnce(okJson(assessmentBody(3, [
+        {
+          id: 1,
+          text: 'Insight',
+          score: 4,
+          linkedSources: ['Source A', 'Source B'],
+          rationale: 'because reasons',
+          feedback: 'fb',
+          aiWritingSignal: 'Human',
+        },
+      ])));
+
+      const result = await client.getAssessment('my-slug', 3, 1, 10);
+      const item = result.items[0];
+      expect(item.id).toBe(1);
+      expect(item.text).toBe('Insight');
+      expect(item.score).toBe(4);
+      expect(item.linkedSources).toEqual(['Source A', 'Source B']);
+      expect(item.rationale).toBe('because reasons');
+      expect(item.feedback).toBe('fb');
+      expect(item.ai_writing_signal).toBe('human');
+    });
+  });
+});
+
+// ── Unit tests for the standalone normalize/transform helpers ──
+
+describe('normalizeAiWritingSignal', () => {
+  it('lowercases known capitalized labels', () => {
+    expect(normalizeAiWritingSignal('Human')).toBe('human');
+    expect(normalizeAiWritingSignal('AI-Assisted')).toBe('ai-assisted');
+    expect(normalizeAiWritingSignal('Mixed')).toBe('mixed');
+    expect(normalizeAiWritingSignal('AI')).toBe('ai');
+  });
+
+  it('passes through already-lowercase labels', () => {
+    expect(normalizeAiWritingSignal('human')).toBe('human');
+    expect(normalizeAiWritingSignal('ai-assisted')).toBe('ai-assisted');
+  });
+
+  it('returns null for null / undefined / non-string', () => {
+    expect(normalizeAiWritingSignal(null)).toBeNull();
+    expect(normalizeAiWritingSignal(undefined)).toBeNull();
+    expect(normalizeAiWritingSignal(42)).toBeNull();
+    expect(normalizeAiWritingSignal({})).toBeNull();
+  });
+
+  it('returns null for unknown labels (forward-compatible)', () => {
+    expect(normalizeAiWritingSignal('Robot')).toBeNull();
+    expect(normalizeAiWritingSignal('Hyper-Synthetic')).toBeNull();
+    expect(normalizeAiWritingSignal('')).toBeNull();
+  });
+});
+
+describe('transformAssessmentItem', () => {
+  it('accepts camelCase aiWritingSignal on input', () => {
+    const out = transformAssessmentItem({ id: 1, text: 'x', aiWritingSignal: 'Human' });
+    expect(out.ai_writing_signal).toBe('human');
+    expect(out).not.toHaveProperty('aiWritingSignal');
+  });
+
+  it('accepts snake_case ai_writing_signal on input (forward-compat if API ever switches)', () => {
+    const out = transformAssessmentItem({ id: 1, text: 'x', ai_writing_signal: 'mixed' });
+    expect(out.ai_writing_signal).toBe('mixed');
+  });
+
+  it('writes null when neither key is present', () => {
+    const out = transformAssessmentItem({ id: 1, text: 'x' });
+    expect(out.ai_writing_signal).toBeNull();
   });
 });

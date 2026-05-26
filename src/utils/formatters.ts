@@ -187,6 +187,7 @@ export function formatAssessmentDOK2(result: {
     if (item.diagnosis) lines.push(`   Diagnosis: ${item.diagnosis}`);
     if (item.feedback) lines.push(`   Feedback: ${item.feedback}`);
     if (item.failReason) lines.push(`   Fail Reason: ${item.failReason}`);
+    lines.push(`   AI Writing Signal: ${formatAiWritingSignal(item.ai_writing_signal)}`);
     lines.push('');
   }
 
@@ -241,6 +242,7 @@ export function formatAssessmentDOK3(
       }
     }
 
+    lines.push(`   AI Writing Signal: ${formatAiWritingSignal(item.ai_writing_signal)}`);
     lines.push('');
   }
 
@@ -312,11 +314,24 @@ export function formatAssessmentDOK4(
       }
     }
 
+    lines.push(`   AI Writing Signal: ${formatAiWritingSignal(item.ai_writing_signal)}`);
     lines.push('');
   }
 
   lines.push(...paginationFooter(pagination));
   return lines.join('\n');
+}
+
+/**
+ * Render the AI Writing Signal label for a single item. Null (pre-launch,
+ * in-progress, errored, or unknown future bucket) renders as "not analyzed".
+ * The signal is informational only; never present it as a grade factor.
+ */
+function formatAiWritingSignal(signal: unknown): string {
+  if (signal === 'human' || signal === 'ai-assisted' || signal === 'mixed' || signal === 'ai') {
+    return signal;
+  }
+  return 'not analyzed';
 }
 
 /**
