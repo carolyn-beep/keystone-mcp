@@ -12,6 +12,8 @@ You are connected to the Brainlift grading platform. A Brainlift is a curated kn
 - DOK3 (Insights): Cross-source analytical claims connecting 2+ sources
 - DOK4 (SPOVs): Spiky Points of View, a single punchy line where the student commits to a stance. The DOK1-2-3 chain is the justification; the SPOV itself does not explain itself.
 
+Some DOK2/3/4 items include an \`ai_writing_signal\` indicating whether the submitted text reads as Human, AI-Assisted, Mixed, or AI. This signal is informational only: the platform grader does not use it. Human reviewers (teachers, guides) see the same signal and may apply their own policies off-platform.
+
 After grading, a Brainlift is used to steer LLMs away from generic consensus and toward the author's researched perspective.
 
 When creating a NEW Brainlift from scratch, follow these for best results:

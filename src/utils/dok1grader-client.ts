@@ -62,12 +62,107 @@ export interface StatusResponse {
   createdAt: string;
 }
 
+/**
+ * AI Writing Signal -- informational label attached to DOK2/3/4 items by the
+ * platform's text-integrity analysis. NOT a grading factor.
+ *
+ * Wire shape: the DOK1Grader internal API emits this field as `aiWritingSignal`
+ * (camelCase) with values capitalized (`'Human' | 'AI-Assisted' | 'Mixed' | 'AI'`).
+ * The brainlift-mcp client transforms ONCE at deserialization (see
+ * `normalizeAiWritingSignal` + `transformAssessmentItem`) into snake_case
+ * `ai_writing_signal` with lowercase values. Downstream code (formatters,
+ * MCP responses) only ever sees the snake_case form.
+ *
+ * Unknown / missing / pre-launch values deserialize to `null` so a future
+ * label bucket cannot crash the agent surface.
+ */
+export type AiWritingSignal = 'human' | 'ai-assisted' | 'mixed' | 'ai';
+
+export interface AssessmentDOK2Item {
+  id: number;
+  grade: number | null;
+  displayTitle: string;
+  sourceName: string;
+  points: string[];
+  diagnosis: string | null;
+  feedback: string | null;
+  failReason: string | null;
+  ai_writing_signal: AiWritingSignal | null;
+  // Other fields (gradingStatus, etc.) may also be present; this interface is
+  // not exhaustive; formatters still read arbitrary properties off items.
+  [key: string]: unknown;
+}
+
+export interface AssessmentDOK3Item {
+  id: number;
+  score: number | null;
+  text: string;
+  linkedSources: string[];
+  rationale: string | null;
+  feedback: string | null;
+  foundationIntegrityIndex: number | null;
+  criteriaSummary: string | null;
+  ai_writing_signal: AiWritingSignal | null;
+  // full-mode fields are optional and read dynamically by the formatter.
+  [key: string]: unknown;
+}
+
+export interface AssessmentDOK4Item {
+  id: number;
+  score: number | null;
+  text: string;
+  linkedInsights: string[];
+  rationale: string | null;
+  feedback: string | null;
+  criteriaSummary: string | null;
+  ai_writing_signal: AiWritingSignal | null;
+  // full-mode fields are optional and read dynamically by the formatter.
+  [key: string]: unknown;
+}
+
 export interface AssessmentResponse {
   slug: string;
   dok: number;
   status: string;
   items: any[];
   pagination: Pagination;
+}
+
+/**
+ * Normalize a raw AI Writing Signal value (any case, any source key) to the
+ * canonical lowercase label or null. Forward-compatible: unknown buckets
+ * collapse to null rather than throwing.
+ */
+export function normalizeAiWritingSignal(raw: unknown): AiWritingSignal | null {
+  if (raw == null) return null;
+  if (typeof raw !== 'string') return null;
+  const lowered = raw.toLowerCase();
+  if (lowered === 'human' || lowered === 'ai-assisted' || lowered === 'mixed' || lowered === 'ai') {
+    return lowered;
+  }
+  return null;
+}
+
+/**
+ * Apply the camelCase to snake_case transform for AI Writing Signal on a single
+ * assessment item. Accepts either `aiWritingSignal` or `ai_writing_signal` on
+ * input (whichever the API emits today or in the future). Always writes
+ * `ai_writing_signal` on the output shape. Returns a new object; does not
+ * mutate the input.
+ */
+export function transformAssessmentItem<T extends Record<string, unknown>>(
+  item: T,
+): T & { ai_writing_signal: AiWritingSignal | null } {
+  const raw =
+    'aiWritingSignal' in item
+      ? item.aiWritingSignal
+      : 'ai_writing_signal' in item
+        ? item.ai_writing_signal
+        : null;
+  const normalized = normalizeAiWritingSignal(raw);
+  // Strip the camelCase form to keep the wire boundary one-way.
+  const { aiWritingSignal: _aiWritingSignal, ...rest } = item as Record<string, unknown>;
+  return { ...(rest as T), ai_writing_signal: normalized };
 }
 
 export interface ExpertRecord {
@@ -355,7 +450,17 @@ export class DOK1GraderClient {
       'GET',
       `/api/internal/brainlifts/${slug}/assessment?${params.toString()}`,
     );
-    return (await response.json()) as AssessmentResponse;
+    const raw = (await response.json()) as AssessmentResponse;
+
+    // Transform AI Writing Signal at the wire boundary for DOK2/3/4.
+    // DOK1 items are not analyzed (decisions §1) and pass through unchanged.
+    if (raw.dok === 2 || raw.dok === 3 || raw.dok === 4) {
+      raw.items = raw.items.map((item) =>
+        transformAssessmentItem(item as Record<string, unknown>),
+      );
+    }
+
+    return raw;
   }
 
   /**
