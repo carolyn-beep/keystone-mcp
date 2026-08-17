@@ -1,7 +1,7 @@
 /**
  * Response formatters for MCP tool outputs.
  *
- * Converts DOK1Grader API JSON into human-readable text.
+ * Converts Keystone API JSON into human-readable text.
  * AI agents consume text better than raw JSON.
  */
 
@@ -23,7 +23,7 @@ import type {
   TaskDetailResponse,
   ReadDeliverableResponse,
   DeliverableListResponse,
-} from './dok1grader-client';
+} from './keystone-client';
 import { labelForCriterion } from './criteria-labels';
 
 const S2_DIVERGENCE_NUDGE =
@@ -839,7 +839,7 @@ export function formatDismissStale(): string {
 
 /**
  * Returns actionable guidance for an agent based on the error context.
- * Parses HTTP status codes from DOK1Grader API errors.
+ * Parses HTTP status codes from Keystone API errors.
  */
 type ToolName =
   | 'get_template'

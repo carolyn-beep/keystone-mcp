@@ -1,5 +1,5 @@
 /**
- * Google OAuth handler for Brainlift MCP.
+ * Google OAuth handler for Keystone MCP.
  * Adapted from clado-mcp google-handler.ts.
  * Handles authorize, callback, and token exchange with Google.
  */

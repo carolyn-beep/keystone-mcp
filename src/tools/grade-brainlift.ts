@@ -7,12 +7,12 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { DOK1GraderClient } from '../utils/dok1grader-client';
+import { KeystoneClient } from '../utils/keystone-client';
 import { formatGradeResponse, formatErrorGuidance } from '../utils/formatters';
 
 interface ToolEnv {
-  DOK1GRADER_BASE_URL: string;
-  DOK1GRADER_SERVICE_KEY: string;
+  KEYSTONE_BASE_URL: string;
+  KEYSTONE_SERVICE_KEY: string;
 }
 
 interface ToolProps {
@@ -47,9 +47,9 @@ export async function handleGradeBrainlift(
   }
 
   try {
-    const client = new DOK1GraderClient(
-      env.DOK1GRADER_BASE_URL,
-      env.DOK1GRADER_SERVICE_KEY,
+    const client = new KeystoneClient(
+      env.KEYSTONE_BASE_URL,
+      env.KEYSTONE_SERVICE_KEY,
     ).withUser(props.email, props.name);
 
     const result = await client.gradeBrainlift(args.markdown, args.title);

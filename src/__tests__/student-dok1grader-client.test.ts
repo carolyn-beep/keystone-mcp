@@ -1,21 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-let DOK1GraderClient: any;
+let KeystoneClient: any;
 
 beforeEach(async () => {
   vi.clearAllMocks();
   vi.restoreAllMocks();
   vi.resetModules();
-  const mod = await import('../utils/dok1grader-client');
-  DOK1GraderClient = mod.DOK1GraderClient;
+  const mod = await import('../utils/keystone-client');
+  KeystoneClient = mod.KeystoneClient;
 });
 
-describe('DOK1GraderClient student sprint methods', () => {
+describe('KeystoneClient student sprint methods', () => {
   const BASE_URL = 'https://example.com';
   const SERVICE_KEY = 'sk-test-123';
 
   function makeClient() {
-    return new DOK1GraderClient(BASE_URL, SERVICE_KEY).withUser('student@example.com', 'Student User');
+    return new KeystoneClient(BASE_URL, SERVICE_KEY).withUser('student@example.com', 'Student User');
   }
 
   it('generatePlan posts localDate to internal plans endpoint', async () => {

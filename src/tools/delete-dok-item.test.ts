@@ -7,14 +7,14 @@ import { handleDeleteDokItem } from './delete-dok-item';
 
 const mockDeleteDokItem = vi.fn();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: vi.fn().mockReturnThis(),
     deleteDokItem: mockDeleteDokItem,
   })),
 }));
 
-const env = { DOK1GRADER_BASE_URL: 'https://api.test.com', DOK1GRADER_SERVICE_KEY: 'key' };
+const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };
 const props = { email: 'user@test.com', name: 'Test' };
 
 describe('handleDeleteDokItem', () => {

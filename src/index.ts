@@ -1,8 +1,8 @@
 /**
- * Brainlift MCP Server
+ * Keystone MCP
  *
  * Cloudflare Worker that exposes Brainlift grading tools via Model Context Protocol.
- * Uses Google OAuth for user identification and communicates with DOK1Grader
+ * Uses Google OAuth for user identification and communicates with Keystone
  * via service API keys.
  */
 
@@ -32,7 +32,7 @@ import type { Env, Props } from './types/env';
 
 export class BrainliftMCP extends McpAgent<Env, Record<string, never>, Props> {
   server = new McpServer({
-    name: 'Brainlift MCP',
+    name: 'Keystone MCP',
     version: '0.1.0',
     instructions: BRAINLIFT_MCP_INSTRUCTIONS,
   });

@@ -9,15 +9,15 @@ import { handleDismissStale } from './dismiss-stale';
 const mockGetStaleItems = vi.fn();
 const mockDismissStale = vi.fn();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: vi.fn().mockReturnThis(),
     getStaleItems: mockGetStaleItems,
     dismissStale: mockDismissStale,
   })),
 }));
 
-const env = { DOK1GRADER_BASE_URL: 'https://api.test.com', DOK1GRADER_SERVICE_KEY: 'key' };
+const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };
 const props = { email: 'user@test.com', name: 'Test' };
 
 describe('handleGetStaleItems', () => {
