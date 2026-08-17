@@ -1,6 +1,8 @@
 # Keystone MCP
 
-A [Model Context Protocol](https://modelcontextprotocol.io/) server that lets any MCP-compatible AI agent work with Brainlifts programmatically — create them, grade them, curate them, and drive a 30-day execution sprint. Built as a Cloudflare Worker with Google OAuth, backed by the Keystone platform.
+A [Model Context Protocol](https://modelcontextprotocol.io/) server that lets any MCP-compatible AI agent work with Keystone Documents programmatically — create them, grade them, curate them, and drive a 30-day execution sprint. Built as a Cloudflare Worker with Google OAuth, backed by the Keystone platform.
+
+> **Terminology:** in the tool names, slugs, and API paths, a Keystone Document is called a **`brainlift`** (e.g. `grade_brainlift`, `list_brainlifts`, `/api/brainlifts/…`). That's the platform's internal entity name and the deployed contract shared with the Keystone API, so it is kept as-is throughout the tools.
 
 ## Two server variants
 
