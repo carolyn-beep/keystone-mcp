@@ -1,8 +1,8 @@
 /**
  * Tests for FR3: grade_brainlift MCP tool
  *
- * Tests happy path, auth errors, and DOK1Grader errors.
- * Mocks: DOK1GraderClient
+ * Tests happy path, auth errors, and Keystone errors.
+ * Mocks: KeystoneClient
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -10,8 +10,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockGradeBrainlift = vi.fn();
 const mockWithUser = vi.fn().mockReturnThis();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: mockWithUser,
     gradeBrainlift: mockGradeBrainlift,
   })),
@@ -22,10 +22,10 @@ vi.mock('../utils/formatters', () => ({
   formatErrorGuidance: vi.fn(() => 'Try again later.'),
 }));
 
-import { DOK1GraderClient } from '../utils/dok1grader-client';
+import { KeystoneClient } from '../utils/keystone-client';
 import { handleGradeBrainlift } from '../tools/grade-brainlift';
 
-const MockedClient = vi.mocked(DOK1GraderClient);
+const MockedClient = vi.mocked(KeystoneClient);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -33,8 +33,8 @@ beforeEach(() => {
 });
 
 const validEnv = {
-  DOK1GRADER_BASE_URL: 'https://example.com',
-  DOK1GRADER_SERVICE_KEY: 'sk-test-123',
+  KEYSTONE_BASE_URL: 'https://example.com',
+  KEYSTONE_SERVICE_KEY: 'sk-test-123',
 };
 
 const validProps = {
@@ -88,8 +88,8 @@ describe('grade_brainlift tool handler', () => {
     expect(result.isError).toBe(true);
   });
 
-  it('returns user-friendly error on DOK1Grader failure', async () => {
-    mockGradeBrainlift.mockRejectedValue(new Error('DOK1Grader API error: 400 - Markdown content is required'));
+  it('returns user-friendly error on Keystone failure', async () => {
+    mockGradeBrainlift.mockRejectedValue(new Error('Keystone API error: 400 - Markdown content is required'));
 
     const result = await handleGradeBrainlift({ markdown: '' }, validEnv, validProps);
 

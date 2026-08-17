@@ -6,12 +6,12 @@
 
 import { z } from 'zod';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { DOK1GraderClient, type GeneratePlanInput } from '../utils/dok1grader-client';
+import { KeystoneClient, type GeneratePlanInput } from '../utils/keystone-client';
 import { formatGeneratedPlan, formatErrorGuidance } from '../utils/formatters';
 
 interface ToolEnv {
-  DOK1GRADER_BASE_URL: string;
-  DOK1GRADER_SERVICE_KEY: string;
+  KEYSTONE_BASE_URL: string;
+  KEYSTONE_SERVICE_KEY: string;
 }
 
 interface ToolProps {
@@ -44,7 +44,7 @@ export async function handleGeneratePlan(
   }
 
   try {
-    const client = new DOK1GraderClient(env.DOK1GRADER_BASE_URL, env.DOK1GRADER_SERVICE_KEY)
+    const client = new KeystoneClient(env.KEYSTONE_BASE_URL, env.KEYSTONE_SERVICE_KEY)
       .withUser(props.email, props.name);
     const input: GeneratePlanInput = {
       localDate: args.localDate,
@@ -57,7 +57,7 @@ export async function handleGeneratePlan(
         type: 'text',
         text: formatGeneratedPlan(result, {
           slug: args.brainliftSlug,
-          baseUrl: env.DOK1GRADER_BASE_URL,
+          baseUrl: env.KEYSTONE_BASE_URL,
           localDate: args.localDate,
         }),
       }],

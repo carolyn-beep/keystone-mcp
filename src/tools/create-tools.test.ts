@@ -13,8 +13,8 @@ const mockCreateDok2 = vi.fn();
 const mockCreateDok3 = vi.fn();
 const mockCreateDok4 = vi.fn();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: vi.fn().mockReturnThis(),
     createDok1: mockCreateDok1,
     createDok2: mockCreateDok2,
@@ -23,7 +23,7 @@ vi.mock('../utils/dok1grader-client', () => ({
   })),
 }));
 
-const env = { DOK1GRADER_BASE_URL: 'https://api.test.com', DOK1GRADER_SERVICE_KEY: 'key' };
+const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };
 const props = { email: 'user@test.com', name: 'Test' };
 const noAuth = { email: '', name: '' };
 

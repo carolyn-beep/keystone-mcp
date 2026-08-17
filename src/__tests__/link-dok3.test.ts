@@ -7,8 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockLinkDok3 = vi.fn();
 const mockWithUser = vi.fn().mockReturnThis();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: mockWithUser,
     linkDok3: mockLinkDok3,
   })),
@@ -27,8 +27,8 @@ beforeEach(() => {
 });
 
 const validEnv = {
-  DOK1GRADER_BASE_URL: 'https://example.com',
-  DOK1GRADER_SERVICE_KEY: 'sk-test-123',
+  KEYSTONE_BASE_URL: 'https://example.com',
+  KEYSTONE_SERVICE_KEY: 'sk-test-123',
 };
 
 const validProps = {
@@ -63,7 +63,7 @@ describe('link_dok3 tool handler', () => {
   });
 
   it('returns error on API failure', async () => {
-    mockLinkDok3.mockRejectedValue(new Error('DOK1Grader API error: 404 - Not found'));
+    mockLinkDok3.mockRejectedValue(new Error('Keystone API error: 404 - Not found'));
 
     const result = await handleLinkDok3(
       { slug: 'bad', insightId: 999, dok2Ids: [10] },

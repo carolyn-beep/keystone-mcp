@@ -1,8 +1,8 @@
 /**
  * Tests for FR5: get_brainlift_assessment MCP tool
  *
- * Tests statusOnly vs items mode, auth errors, and DOK1Grader errors.
- * Mocks: DOK1GraderClient, formatters
+ * Tests statusOnly vs items mode, auth errors, and Keystone errors.
+ * Mocks: KeystoneClient, formatters
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -11,8 +11,8 @@ const mockGetStatus = vi.fn();
 const mockGetAssessment = vi.fn();
 const mockWithUser = vi.fn().mockReturnThis();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: mockWithUser,
     getStatus: mockGetStatus,
     getAssessment: mockGetAssessment,
@@ -25,10 +25,10 @@ vi.mock('../utils/formatters', () => ({
   formatErrorGuidance: vi.fn(() => 'Try again later.'),
 }));
 
-import { DOK1GraderClient } from '../utils/dok1grader-client';
+import { KeystoneClient } from '../utils/keystone-client';
 import { handleGetBrainliftAssessment } from '../tools/get-brainlift-assessment';
 
-const MockedClient = vi.mocked(DOK1GraderClient);
+const MockedClient = vi.mocked(KeystoneClient);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -36,8 +36,8 @@ beforeEach(() => {
 });
 
 const validEnv = {
-  DOK1GRADER_BASE_URL: 'https://example.com',
-  DOK1GRADER_SERVICE_KEY: 'sk-test-123',
+  KEYSTONE_BASE_URL: 'https://example.com',
+  KEYSTONE_SERVICE_KEY: 'sk-test-123',
 };
 
 const validProps = {
@@ -178,7 +178,7 @@ describe('get_brainlift_assessment tool handler', () => {
     });
 
     it('returns user-friendly error on 404', async () => {
-      mockGetAssessment.mockRejectedValue(new Error('DOK1Grader API error: 404 - Brainlift not found'));
+      mockGetAssessment.mockRejectedValue(new Error('Keystone API error: 404 - Brainlift not found'));
 
       const result = await handleGetBrainliftAssessment(
         { slug: 'bad', dok: 1 },

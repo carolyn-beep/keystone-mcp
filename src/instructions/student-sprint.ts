@@ -1,5 +1,5 @@
 /**
- * Sprint-specific instructions appended to the Brainlift MCP instructions
+ * Sprint-specific instructions appended to the Keystone MCP instructions
  * for the student MCP. Covers coaching posture, sprint loop orientation,
  * and conceptual framing for flagship deliverables.
  *
