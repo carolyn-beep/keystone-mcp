@@ -22,6 +22,7 @@ interface ToolProps {
 interface ToolResult {
   content: Array<{ type: 'text'; text: string }>;
   isError?: boolean;
+  [key: string]: unknown;
 }
 
 export async function handleLinkDok3(
