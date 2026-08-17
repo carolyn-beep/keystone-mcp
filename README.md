@@ -1,5 +1,7 @@
 # Keystone MCP
 
+![CI](https://github.com/carolyn-beep/keystone-mcp/actions/workflows/ci.yml/badge.svg)
+
 A [Model Context Protocol](https://modelcontextprotocol.io/) server that lets any MCP-compatible AI agent work with Keystone Documents programmatically — create them, grade them, curate them, and drive a 30-day execution sprint. Built as a Cloudflare Worker with Google OAuth, backed by the Keystone platform.
 
 > **Part of the [Keystone](https://github.com/carolyn-beep/keystone) platform.** This is the MCP server that exposes Keystone's grading and knowledge-building tools to external agents. **Evaluating my agentic-tools / integration work?** The fastest reads are [Agent-first design](#agent-first-design) (context engineering + resilient, agent-readable error handling) and [Auth flow](#auth-flow) (service-key + user-identity integration across two services). The platform itself — the tool/skill registry, unified AI client, and DOK1–DOK4 grading pipelines — lives in the [main Keystone repo](https://github.com/carolyn-beep/keystone).
