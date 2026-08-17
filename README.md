@@ -4,6 +4,8 @@
 
 A [Model Context Protocol](https://modelcontextprotocol.io/) server that lets any MCP-compatible AI agent work with Keystone Documents programmatically — create them, grade them, curate them, and drive a 30-day execution sprint. Built as a Cloudflare Worker with Google OAuth, backed by the Keystone platform.
 
+> **Published as a portfolio reference — view-only, all rights reserved. See [LICENSE](LICENSE).** The setup steps below are included to show how the pieces fit together, not as an invitation to deploy it.
+
 > **Part of the [Keystone](https://github.com/carolyn-beep/keystone) platform.** This is the MCP server that exposes Keystone's grading and knowledge-building tools to external agents. **Evaluating my agentic-tools / integration work?** The fastest reads are [Agent-first design](#agent-first-design) (context engineering + resilient, agent-readable error handling) and [Auth flow](#auth-flow) (service-key + user-identity integration across two services). The platform itself — the tool/skill registry, unified AI client, and DOK1–DOK4 grading pipelines — lives in the [main Keystone repo](https://github.com/carolyn-beep/keystone).
 
 > **Terminology:** in the tool names, slugs, and API paths, a Keystone Document is called a **`brainlift`** (e.g. `grade_brainlift`, `list_brainlifts`, `/api/brainlifts/…`). That's the platform's internal entity name and the deployed contract shared with the Keystone API, so it is kept as-is throughout the tools.
@@ -233,11 +235,17 @@ Update the `id` in `wrangler.jsonc` with the returned namespace ID.
 
 ### Keystone service key
 
-The Keystone side needs a row in the `api_keys` table:
+This runs against the **Keystone platform's** database — this repo is a Cloudflare Worker and has no database of its own. Generate a strong random key (don't type a literal), then insert it into Keystone's `api_keys` table:
+
+```bash
+# generate the key
+openssl rand -hex 32
+```
 
 ```sql
+-- run against the Keystone platform DB
 INSERT INTO api_keys (key, name, rate_limit, is_active)
-VALUES ('your-service-api-key', 'keystone-mcp-production', 60, true);
+VALUES ('<paste-the-generated-key>', 'keystone-mcp-production', 60, true);
 ```
 
 This key goes into the MCP server's `KEYSTONE_SERVICE_KEY` env var.
