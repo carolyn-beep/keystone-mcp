@@ -1,7 +1,7 @@
 /**
  * Human-readable names for DOK3 and DOK4 criterion codes.
  *
- * Mirrors `server/lib/criteria-labels.ts` in DOK1GraderV3. Two repos = two
+ * Mirrors `server/lib/criteria-labels.ts` in KeystoneV3. Two repos = two
  * copies by design; keep them in sync manually when keys are added or renamed.
  *
  * Lookup is keyed on (dokLevel, criterion code). DOK3 and DOK4 use

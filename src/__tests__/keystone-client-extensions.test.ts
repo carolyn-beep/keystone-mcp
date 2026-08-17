@@ -1,5 +1,5 @@
 /**
- * Tests for FR1: DOK1GraderClient extensions
+ * Tests for FR1: KeystoneClient extensions
  *
  * Tests gradeBrainlift, listBrainlifts, getStatus, getAssessment methods.
  * Mocks: global fetch
@@ -7,29 +7,29 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-let DOK1GraderClient: any;
+let KeystoneClient: any;
 
 beforeEach(async () => {
   vi.clearAllMocks();
   vi.restoreAllMocks();
   vi.resetModules();
-  const mod = await import('../utils/dok1grader-client');
-  DOK1GraderClient = mod.DOK1GraderClient;
+  const mod = await import('../utils/keystone-client');
+  KeystoneClient = mod.KeystoneClient;
 });
 
-describe('DOK1GraderClient extensions', () => {
+describe('KeystoneClient extensions', () => {
   const BASE_URL = 'https://example.com';
   const SERVICE_KEY = 'sk-test-123';
 
   function makeClient() {
-    return new DOK1GraderClient(BASE_URL, SERVICE_KEY).withUser('user@example.com', 'Test User');
+    return new KeystoneClient(BASE_URL, SERVICE_KEY).withUser('user@example.com', 'Test User');
   }
 
   // ── gradeBrainlift ──
 
   describe('gradeBrainlift', () => {
     it('throws if withUser not called', async () => {
-      const client = new DOK1GraderClient(BASE_URL, SERVICE_KEY);
+      const client = new KeystoneClient(BASE_URL, SERVICE_KEY);
       await expect(client.gradeBrainlift('# Test')).rejects.toThrow(/withUser/i);
     });
 
@@ -94,7 +94,7 @@ describe('DOK1GraderClient extensions', () => {
 
   describe('listBrainlifts', () => {
     it('throws if withUser not called', async () => {
-      const client = new DOK1GraderClient(BASE_URL, SERVICE_KEY);
+      const client = new KeystoneClient(BASE_URL, SERVICE_KEY);
       await expect(client.listBrainlifts()).rejects.toThrow(/withUser/i);
     });
 
@@ -161,7 +161,7 @@ describe('DOK1GraderClient extensions', () => {
 
   describe('getStatus', () => {
     it('throws if withUser not called', async () => {
-      const client = new DOK1GraderClient(BASE_URL, SERVICE_KEY);
+      const client = new KeystoneClient(BASE_URL, SERVICE_KEY);
       await expect(client.getStatus('my-slug')).rejects.toThrow(/withUser/i);
     });
 
@@ -220,7 +220,7 @@ describe('DOK1GraderClient extensions', () => {
 
   describe('getAssessment', () => {
     it('throws if withUser not called', async () => {
-      const client = new DOK1GraderClient(BASE_URL, SERVICE_KEY);
+      const client = new KeystoneClient(BASE_URL, SERVICE_KEY);
       await expect(client.getAssessment('slug', 1, 1, 20)).rejects.toThrow(/withUser/i);
     });
 

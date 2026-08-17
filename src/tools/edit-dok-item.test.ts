@@ -7,14 +7,14 @@ import { handleEditDokItem } from './edit-dok-item';
 
 const mockEditDokItem = vi.fn();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: vi.fn().mockReturnThis(),
     editDokItem: mockEditDokItem,
   })),
 }));
 
-const env = { DOK1GRADER_BASE_URL: 'https://api.test.com', DOK1GRADER_SERVICE_KEY: 'key' };
+const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };
 const props = { email: 'user@test.com', name: 'Test' };
 
 describe('handleEditDokItem', () => {
@@ -47,7 +47,7 @@ describe('handleEditDokItem', () => {
   });
 
   it('formats API errors with guidance', async () => {
-    mockEditDokItem.mockRejectedValueOnce(new Error('DOK1Grader API error: 404 - Not found'));
+    mockEditDokItem.mockRejectedValueOnce(new Error('Keystone API error: 404 - Not found'));
 
     const result = await handleEditDokItem(
       { slug: 's', dok: 1, itemId: 999, text: 't' },

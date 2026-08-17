@@ -1,27 +1,27 @@
 /**
  * Tests for FR4: get_template MCP tool
  *
- * Tests happy path, missing props, and DOK1Grader connection errors.
- * Mocks: DOK1GraderClient
+ * Tests happy path, missing props, and Keystone connection errors.
+ * Mocks: KeystoneClient
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mock DOK1GraderClient
+// Mock KeystoneClient
 const mockGetTemplate = vi.fn();
 const mockWithUser = vi.fn().mockReturnThis();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: mockWithUser,
     getTemplate: mockGetTemplate,
   })),
 }));
 
-import { DOK1GraderClient } from '../utils/dok1grader-client';
+import { KeystoneClient } from '../utils/keystone-client';
 import { handleGetTemplate } from '../tools/get-template';
 
-const MockedDOK1GraderClient = vi.mocked(DOK1GraderClient);
+const MockedKeystoneClient = vi.mocked(KeystoneClient);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -30,8 +30,8 @@ beforeEach(() => {
 
 describe('get_template tool handler', () => {
   const validEnv = {
-    DOK1GRADER_BASE_URL: 'https://example.com',
-    DOK1GRADER_SERVICE_KEY: 'sk-test-123',
+    KEYSTONE_BASE_URL: 'https://example.com',
+    KEYSTONE_SERVICE_KEY: 'sk-test-123',
   };
 
   const validProps = {
@@ -53,12 +53,12 @@ describe('get_template tool handler', () => {
     expect(result.content[0].text).toBe(templateContent);
   });
 
-  it('creates DOK1GraderClient with env values', async () => {
+  it('creates KeystoneClient with env values', async () => {
     mockGetTemplate.mockResolvedValue('# T');
 
     await handleGetTemplate(validEnv, validProps);
 
-    expect(MockedDOK1GraderClient).toHaveBeenCalledWith(
+    expect(MockedKeystoneClient).toHaveBeenCalledWith(
       'https://example.com',
       'sk-test-123',
     );
@@ -88,7 +88,7 @@ describe('get_template tool handler', () => {
     expect(result.content[0].text).toMatch(/auth/i);
   });
 
-  it('returns error with retry suggestion when DOK1Grader is unreachable', async () => {
+  it('returns error with retry suggestion when Keystone is unreachable', async () => {
     mockGetTemplate.mockRejectedValue(new Error('fetch failed'));
 
     const result = await handleGetTemplate(validEnv, validProps);
@@ -97,8 +97,8 @@ describe('get_template tool handler', () => {
     expect(result.content[0].text).toMatch(/try again/i);
   });
 
-  it('returns error with status when DOK1Grader returns non-200', async () => {
-    mockGetTemplate.mockRejectedValue(new Error('DOK1Grader API error: 500 - Internal Server Error'));
+  it('returns error with status when Keystone returns non-200', async () => {
+    mockGetTemplate.mockRejectedValue(new Error('Keystone API error: 500 - Internal Server Error'));
 
     const result = await handleGetTemplate(validEnv, validProps);
 

@@ -1,6 +1,6 @@
-# Brainlift MCP Server
+# Keystone MCP
 
-A [Model Context Protocol](https://modelcontextprotocol.io/) server that lets any MCP-compatible AI agent work with Brainlifts programmatically — create them, grade them, curate them, and drive a 30-day execution sprint. Built as a Cloudflare Worker with Google OAuth, backed by the DOK1Grader platform.
+A [Model Context Protocol](https://modelcontextprotocol.io/) server that lets any MCP-compatible AI agent work with Brainlifts programmatically — create them, grade them, curate them, and drive a 30-day execution sprint. Built as a Cloudflare Worker with Google OAuth, backed by the Keystone platform.
 
 ## Two server variants
 
@@ -8,14 +8,14 @@ This repo ships two workers from the same codebase:
 
 | Worker | Entrypoint | Toolset | Intended user |
 |---|---|---|---|
-| `brainlift-mcp` | `src/index.ts` | Brainlift CRUD, grading, DOK-item curation | General MCP clients — authors building and grading Brainlifts |
-| `brainlift-mcp-student` | `src/index.student.ts` | All of the above plus 30-day sprint planning and deliverables | Students going through the Scope Breaker sprint flow with a coach-agent |
+| `keystone-mcp` | `src/index.ts` | Brainlift CRUD, grading, DOK-item curation | General MCP clients — authors building and grading Brainlifts |
+| `keystone-mcp-student` | `src/index.student.ts` | All of the above plus 30-day sprint planning and deliverables | Students going through the Scope Breaker sprint flow with a coach-agent |
 
 The student variant composes the general Brainlift instructions with a sprint-specific coaching appendix and registers the additional sprint tools.
 
 ## What it does
 
-An AI agent connects via MCP, authenticates with Google, and gets access to the tools listed below. The agent never talks to DOK1Grader directly — the MCP server handles auth, user provisioning, and API communication behind the scenes.
+An AI agent connects via MCP, authenticates with Google, and gets access to the tools listed below. The agent never talks to Keystone directly — the MCP server handles auth, user provisioning, and API communication behind the scenes.
 
 ### Shared tools (both variants)
 
@@ -49,33 +49,33 @@ An AI agent connects via MCP, authenticates with Google, and gets access to the 
 
 ```
                           Google OAuth
-  MCP Client  <------------------------------>  Brainlift MCP
+  MCP Client  <------------------------------>  Keystone MCP
   (AI Agent)          MCP Protocol              (Cloudflare Worker)
                                                       |
                                               Service API Key +
                                               User email header
                                                       |
-                                                DOK1Grader
+                                                Keystone
                                                 Internal API
                                                 /api/internal/*
 ```
 
 **Two repos, two deployment targets:**
 
-- **This repo** (`brainlift-mcp/`) -- Cloudflare Worker. Handles MCP protocol, Google OAuth, tool dispatch, and response formatting.
-- **DOK1GraderV3** -- Node/Express on Render. Handles parsing, extraction, grading pipeline, and data storage. Exposes `/api/internal/*` endpoints behind service API key auth.
+- **This repo** (`keystone-mcp/`) -- Cloudflare Worker. Handles MCP protocol, Google OAuth, tool dispatch, and response formatting.
+- **KeystoneV3** -- Node/Express on Render. Handles parsing, extraction, grading pipeline, and data storage. Exposes `/api/internal/*` endpoints behind service API key auth.
 
-The MCP server is a thin orchestration layer. All grading logic lives in DOK1Grader.
+The MCP server is a thin orchestration layer. All grading logic lives in Keystone.
 
 ## Auth flow
 
 1. AI agent connects to MCP server
 2. MCP redirects to Google OAuth (scopes: `openid email profile`)
 3. User consents, MCP stores Google profile (name, email) as Durable Object props
-4. On each tool call, MCP sends to DOK1Grader:
+4. On each tool call, MCP sends to Keystone:
    - `X-Service-Key` header (validates the MCP server itself)
    - `X-User-Email` / `X-User-Name` headers (identifies the end user)
-5. DOK1Grader's `requireServiceAuth` middleware validates the key, finds or creates the user, and sets auth context as if they logged in natively
+5. Keystone's `requireServiceAuth` middleware validates the key, finds or creates the user, and sets auth context as if they logged in natively
 
 Users who arrive via MCP and later sign into the web UI with the same Google account merge seamlessly -- same email, same user.
 
@@ -136,10 +136,10 @@ Not `{"score":4,"fact":"The Supreme Court..."}`.
 ## Project structure
 
 ```
-brainlift-mcp/
+keystone-mcp/
   src/
-    index.ts                      # brainlift-mcp entrypoint — general author variant
-    index.student.ts              # brainlift-mcp-student entrypoint — author + sprint tools
+    index.ts                      # keystone-mcp entrypoint — general author variant
+    index.student.ts              # keystone-mcp-student entrypoint — author + sprint tools
     google-handler.ts             # Google OAuth authorize/callback flow
     instructions/
       brainlift.ts                # Shared server instructions (DOK levels, workflows, curation posture)
@@ -164,13 +164,13 @@ brainlift-mcp/
       update-deliverable.ts       # [student] Replace a deliverable's content
       list-deliverables.ts        # [student] List deliverables per plan
     utils/
-      dok1grader-client.ts        # HTTP client for DOK1Grader internal API
+      keystone-client.ts        # HTTP client for Keystone internal API
       formatters.ts               # Human-readable response formatters + error guidance
     types/
       env.d.ts                    # Env and Props interfaces
     __tests__/                    # Vitest suite for tools, formatters, and client
-  wrangler.jsonc                  # brainlift-mcp (author) Cloudflare Worker config
-  wrangler.student.jsonc          # brainlift-mcp-student Cloudflare Worker config (incl. staging env)
+  wrangler.jsonc                  # keystone-mcp (author) Cloudflare Worker config
+  wrangler.student.jsonc          # keystone-mcp-student Cloudflare Worker config (incl. staging env)
   package.json
   tsconfig.json
   vitest.config.ts
@@ -183,7 +183,7 @@ brainlift-mcp/
 - Node.js 18+
 - Cloudflare account with Workers enabled
 - Google Cloud project with OAuth 2.0 credentials
-- Running DOK1Grader instance with service API key
+- Running Keystone instance with service API key
 
 ### Environment variables
 
@@ -193,8 +193,8 @@ Create `.dev.vars` for local development:
 GOOGLE_CLIENT_ID=your-google-client-id
 GOOGLE_CLIENT_SECRET=your-google-client-secret
 COOKIE_ENCRYPTION_KEY=random-32-char-string
-DOK1GRADER_BASE_URL=http://localhost:5000
-DOK1GRADER_SERVICE_KEY=your-service-api-key
+KEYSTONE_BASE_URL=http://localhost:5000
+KEYSTONE_SERVICE_KEY=your-service-api-key
 ```
 
 For production, set these as Cloudflare Worker secrets:
@@ -203,10 +203,10 @@ For production, set these as Cloudflare Worker secrets:
 npx wrangler secret put GOOGLE_CLIENT_ID
 npx wrangler secret put GOOGLE_CLIENT_SECRET
 npx wrangler secret put COOKIE_ENCRYPTION_KEY
-npx wrangler secret put DOK1GRADER_SERVICE_KEY
+npx wrangler secret put KEYSTONE_SERVICE_KEY
 ```
 
-`DOK1GRADER_BASE_URL` is set in `wrangler.jsonc` as a plaintext var (different per environment).
+`KEYSTONE_BASE_URL` is set in `wrangler.jsonc` as a plaintext var (different per environment).
 
 ### Cloudflare resources
 
@@ -225,23 +225,23 @@ Update the `id` in `wrangler.jsonc` with the returned namespace ID.
 3. Add authorized redirect URI: `https://your-worker.workers.dev/callback`
 4. Copy Client ID and Client Secret to your env vars
 
-### DOK1Grader service key
+### Keystone service key
 
-The DOK1Grader side needs a row in the `api_keys` table:
+The Keystone side needs a row in the `api_keys` table:
 
 ```sql
 INSERT INTO api_keys (key, name, rate_limit, is_active)
-VALUES ('your-service-api-key', 'brainlift-mcp-production', 60, true);
+VALUES ('your-service-api-key', 'keystone-mcp-production', 60, true);
 ```
 
-This key goes into the MCP server's `DOK1GRADER_SERVICE_KEY` env var.
+This key goes into the MCP server's `KEYSTONE_SERVICE_KEY` env var.
 
 ### Run locally
 
 ```bash
 npm install
-npm run dev              # brainlift-mcp (author variant) on port 8787
-npm run dev:student      # brainlift-mcp-student (author + sprint) on port 8788
+npm run dev              # keystone-mcp (author variant) on port 8787
+npm run dev:student      # keystone-mcp-student (author + sprint) on port 8788
 ```
 
 ### Run tests
@@ -253,7 +253,7 @@ npm run test:watch       # vitest watch mode
 
 ### Deploy
 
-**Author variant (brainlift-mcp → prod):**
+**Author variant (keystone-mcp → prod):**
 
 ```bash
 npm run deploy                                         # wrangler deploy (default config)
@@ -262,34 +262,34 @@ npm run deploy                                         # wrangler deploy (defaul
 **Student variant — prod:**
 
 ```bash
-npx wrangler deploy --config wrangler.student.jsonc    # → brainlift-mcp-student (prod: brainliftcentral.com)
+npx wrangler deploy --config wrangler.student.jsonc    # → keystone-mcp-student (prod: brainliftcentral.com)
 ```
 
 **Student variant — staging:**
 
 ```bash
 npx wrangler deploy --config wrangler.student.jsonc --env staging
-# → brainlift-mcp-student-staging (staging: brainlift-platform.onrender.com)
+# → keystone-mcp-student-staging (staging: brainlift-platform.onrender.com)
 ```
 
-The staging env block lives in `wrangler.student.jsonc` under `env.staging`. It publishes as a separate Cloudflare Worker (`brainlift-mcp-student-staging`) with its own `DOK1GRADER_BASE_URL` pointing at the staging backend. Secrets (OAuth credentials, cookie key, staging service API key) must be set per-env:
+The staging env block lives in `wrangler.student.jsonc` under `env.staging`. It publishes as a separate Cloudflare Worker (`keystone-mcp-student-staging`) with its own `KEYSTONE_BASE_URL` pointing at the staging backend. Secrets (OAuth credentials, cookie key, staging service API key) must be set per-env:
 
 ```bash
-npx wrangler secret put DOK1GRADER_SERVICE_KEY --config wrangler.student.jsonc --env staging
+npx wrangler secret put KEYSTONE_SERVICE_KEY --config wrangler.student.jsonc --env staging
 npx wrangler secret put GOOGLE_CLIENT_ID       --config wrangler.student.jsonc --env staging
 npx wrangler secret put GOOGLE_CLIENT_SECRET   --config wrangler.student.jsonc --env staging
 npx wrangler secret put COOKIE_ENCRYPTION_KEY  --config wrangler.student.jsonc --env staging
 ```
 
-The staging worker needs its own row in the DOK1Grader staging `api_keys` table. Generate a new plaintext key, insert its record into staging's DB, then pipe the plaintext into `DOK1GRADER_SERVICE_KEY` above.
+The staging worker needs its own row in the Keystone staging `api_keys` table. Generate a new plaintext key, insert its record into staging's DB, then pipe the plaintext into `KEYSTONE_SERVICE_KEY` above.
 
 ### Google OAuth redirect URIs
 
 Each worker hostname needs its own authorized redirect URI in the Google Cloud Console OAuth client:
 
-- `https://brainlift-mcp.<subdomain>.workers.dev/callback`
-- `https://brainlift-mcp-student.<subdomain>.workers.dev/callback`
-- `https://brainlift-mcp-student-staging.<subdomain>.workers.dev/callback`
+- `https://keystone-mcp.<subdomain>.workers.dev/callback`
+- `https://keystone-mcp-student.<subdomain>.workers.dev/callback`
+- `https://keystone-mcp-student-staging.<subdomain>.workers.dev/callback`
 
 You can share one OAuth client across all three as long as all callbacks are registered; or use separate clients per worker if you want isolation.
 
@@ -302,7 +302,7 @@ Add to your MCP config:
 ```json
 {
   "mcpServers": {
-    "brainlift-mcp": {
+    "keystone-mcp": {
       "url": "https://your-worker.workers.dev/sse"
     }
   }
@@ -318,7 +318,7 @@ Point your client's MCP server URL to `https://your-worker.workers.dev/sse`. The
 ## Rate limiting
 
 - 60 requests/minute per service API key (configurable per key in `api_keys.rate_limit`)
-- In-memory sliding window on DOK1Grader side
+- In-memory sliding window on Keystone side
 - Assessment polling responses include `retryAfter` hints
 - Tool descriptions guide agents on appropriate polling intervals
 
@@ -326,11 +326,11 @@ Point your client's MCP server URL to `https://your-worker.workers.dev/sse`. The
 
 This project was developed using a spec-driven development workflow:
 
-1. **Research** -- Explored the DOK1Grader codebase, designed the architecture, decomposed into 4 specs with dependency ordering
-2. **Spec 01** (DOK1Grader) -- Service API keys, `requireServiceAuth` middleware, rate limiter, user provisioning
-3. **Spec 02** (both repos) -- Cloudflare Worker scaffold, Google OAuth, `DOK1GraderClient`, `get_template` tool, template endpoint
+1. **Research** -- Explored the Keystone codebase, designed the architecture, decomposed into 4 specs with dependency ordering
+2. **Spec 01** (Keystone) -- Service API keys, `requireServiceAuth` middleware, rate limiter, user provisioning
+3. **Spec 02** (both repos) -- Cloudflare Worker scaffold, Google OAuth, `KeystoneClient`, `get_template` tool, template endpoint
 4. **Test gate** -- Deployed specs 01+02, verified auth end-to-end before proceeding
-5. **Spec 03** (DOK1Grader) -- Grade, list, status, and assessment endpoints with paginated queries
+5. **Spec 03** (Keystone) -- Grade, list, status, and assessment endpoints with paginated queries
 6. **Spec 04** (this repo) -- Remaining MCP tools, response formatters, error guidance
 
 Each spec followed TDD discipline: tests committed before implementation, separate commits for each phase.

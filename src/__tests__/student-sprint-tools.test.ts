@@ -17,8 +17,8 @@ const mockReadDeliverable = vi.fn();
 const mockUpdateDeliverable = vi.fn();
 const mockListDeliverables = vi.fn();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: vi.fn().mockReturnThis(),
     generatePlan: mockGeneratePlan,
     getPlan: mockGetPlan,
@@ -31,7 +31,7 @@ vi.mock('../utils/dok1grader-client', () => ({
   })),
 }));
 
-const env = { DOK1GRADER_BASE_URL: 'https://api.test.com', DOK1GRADER_SERVICE_KEY: 'key' };
+const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };
 const props = { email: 'student@test.com', name: 'Student' };
 const noAuth = { email: '', name: '' };
 
@@ -257,7 +257,7 @@ describe('student sprint tool handlers', () => {
   });
 
   it('returns tool-specific conflict guidance for save deliverable', async () => {
-    mockSaveDeliverable.mockRejectedValueOnce(new Error('DOK1Grader API error: 409 - A deliverable already exists for this task'));
+    mockSaveDeliverable.mockRejectedValueOnce(new Error('Keystone API error: 409 - A deliverable already exists for this task'));
 
     const result = await handleSaveDeliverable(
       { brainliftSlug: 'scope-breaker', taskId: 5, title: 'Title', markdown: '# body' },
