@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "brainlift-mcp-student",
+  "name": "keystone-mcp-student",
   "main": "src/index.student.ts",
   "compatibility_date": "2025-03-10",
   "compatibility_flags": ["nodejs_compat"],
@@ -28,11 +28,11 @@
     "enabled": true
   },
   "vars": {
-    "DOK1GRADER_BASE_URL": "https://brainliftcentral.com"
+    "KEYSTONE_BASE_URL": "https://brainliftcentral.com"
   },
   "env": {
     "staging": {
-      "name": "brainlift-mcp-student-staging",
+      "name": "keystone-mcp-student-staging",
       "migrations": [
         {
           "new_sqlite_classes": ["BrainliftStudentMCP"],
@@ -54,7 +54,7 @@
         }
       ],
       "vars": {
-        "DOK1GRADER_BASE_URL": "https://brainlift-platform.onrender.com"
+        "KEYSTONE_BASE_URL": "https://brainlift-platform.onrender.com"
       }
     }
   },

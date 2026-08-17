@@ -1,6 +1,6 @@
 /**
  * Shared MCP server instructions for Brainlift creation, grading, and DOK
- * item refinement. Used by both the general Brainlift MCP and the student
+ * item refinement. Used by both the general Keystone MCP and the student
  * sprint MCP (which composes these with additional sprint-specific guidance).
  */
 

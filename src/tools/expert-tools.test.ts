@@ -11,8 +11,8 @@ const mockListExperts = vi.fn();
 const mockCreateExperts = vi.fn();
 const mockDeleteExpert = vi.fn();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: vi.fn().mockReturnThis(),
     listExperts: mockListExperts,
     createExperts: mockCreateExperts,
@@ -20,7 +20,7 @@ vi.mock('../utils/dok1grader-client', () => ({
   })),
 }));
 
-const env = { DOK1GRADER_BASE_URL: 'https://api.test.com', DOK1GRADER_SERVICE_KEY: 'key' };
+const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };
 const props = { email: 'user@test.com', name: 'Test User' };
 const noAuth = { email: '', name: '' };
 
@@ -60,7 +60,7 @@ describe('handleListExperts', () => {
   });
 
   it('formats backend errors with guidance', async () => {
-    mockListExperts.mockRejectedValueOnce(new Error('DOK1Grader API error: 404 - Brainlift not found'));
+    mockListExperts.mockRejectedValueOnce(new Error('Keystone API error: 404 - Brainlift not found'));
 
     const result = await handleListExperts({ slug: 'missing' }, env, props);
 
@@ -121,7 +121,7 @@ describe('handleCreateExpert', () => {
   });
 
   it('formats backend errors with guidance', async () => {
-    mockCreateExperts.mockRejectedValueOnce(new Error('DOK1Grader API error: 400 - Invalid payload'));
+    mockCreateExperts.mockRejectedValueOnce(new Error('Keystone API error: 400 - Invalid payload'));
 
     const result = await handleCreateExpert({
       slug: 'focus-brainlift',
@@ -156,7 +156,7 @@ describe('handleDeleteExpert', () => {
   });
 
   it('formats backend errors with guidance', async () => {
-    mockDeleteExpert.mockRejectedValueOnce(new Error('DOK1Grader API error: 404 - Expert not found'));
+    mockDeleteExpert.mockRejectedValueOnce(new Error('Keystone API error: 404 - Expert not found'));
 
     const result = await handleDeleteExpert({ slug: 'focus-brainlift', expertId: 999 }, env, props);
 

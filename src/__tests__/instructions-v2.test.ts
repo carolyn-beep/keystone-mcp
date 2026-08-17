@@ -36,7 +36,7 @@ function makeFakeServer() {
   return { server, calls };
 }
 
-const env = { DOK1GRADER_BASE_URL: 'https://api.test.com', DOK1GRADER_SERVICE_KEY: 'k' };
+const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'k' };
 const props = { email: 'u@test.com', name: 'U' };
 
 function getZodDescription(field: { _def?: { description?: string }; description?: string }): string {

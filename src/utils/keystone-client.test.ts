@@ -1,12 +1,12 @@
 /**
- * Tests for DOK1GraderClient CRUD methods.
+ * Tests for KeystoneClient CRUD methods.
  *
  * Verifies URL construction, HTTP method, body serialization,
  * and auth header injection for all new CRUD endpoints.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DOK1GraderClient, normalizeAiWritingSignal, transformAssessmentItem } from './dok1grader-client';
+import { KeystoneClient, normalizeAiWritingSignal, transformAssessmentItem } from './keystone-client';
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -20,12 +20,12 @@ function errorResponse(status: number, body: string) {
   return new Response(body, { status });
 }
 
-describe('DOK1GraderClient CRUD methods', () => {
-  let client: DOK1GraderClient;
+describe('KeystoneClient CRUD methods', () => {
+  let client: KeystoneClient;
 
   beforeEach(() => {
     vi.clearAllMocks();
-    client = new DOK1GraderClient('https://api.example.com', 'test-key')
+    client = new KeystoneClient('https://api.example.com', 'test-key')
       .withUser('user@example.com', 'Test User');
   });
 

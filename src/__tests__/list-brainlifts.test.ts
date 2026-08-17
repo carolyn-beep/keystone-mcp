@@ -1,8 +1,8 @@
 /**
  * Tests for FR4: list_brainlifts MCP tool
  *
- * Tests happy path, auth errors, and DOK1Grader errors.
- * Mocks: DOK1GraderClient, formatters
+ * Tests happy path, auth errors, and Keystone errors.
+ * Mocks: KeystoneClient, formatters
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -10,8 +10,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockListBrainlifts = vi.fn();
 const mockWithUser = vi.fn().mockReturnThis();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: mockWithUser,
     listBrainlifts: mockListBrainlifts,
   })),
@@ -22,10 +22,10 @@ vi.mock('../utils/formatters', () => ({
   formatErrorGuidance: vi.fn(() => 'Try again later.'),
 }));
 
-import { DOK1GraderClient } from '../utils/dok1grader-client';
+import { KeystoneClient } from '../utils/keystone-client';
 import { handleListBrainlifts } from '../tools/list-brainlifts';
 
-const MockedClient = vi.mocked(DOK1GraderClient);
+const MockedClient = vi.mocked(KeystoneClient);
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -33,8 +33,8 @@ beforeEach(() => {
 });
 
 const validEnv = {
-  DOK1GRADER_BASE_URL: 'https://example.com',
-  DOK1GRADER_SERVICE_KEY: 'sk-test-123',
+  KEYSTONE_BASE_URL: 'https://example.com',
+  KEYSTONE_SERVICE_KEY: 'sk-test-123',
 };
 
 const validProps = {
@@ -73,8 +73,8 @@ describe('list_brainlifts tool handler', () => {
     expect(result.content[0].text).toMatch(/auth/i);
   });
 
-  it('returns user-friendly error on DOK1Grader failure', async () => {
-    mockListBrainlifts.mockRejectedValue(new Error('DOK1Grader API error: 500 - Internal error'));
+  it('returns user-friendly error on Keystone failure', async () => {
+    mockListBrainlifts.mockRejectedValue(new Error('Keystone API error: 500 - Internal error'));
 
     const result = await handleListBrainlifts({}, validEnv, validProps);
 

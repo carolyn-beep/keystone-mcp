@@ -7,8 +7,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const mockLinkDok4 = vi.fn();
 const mockWithUser = vi.fn().mockReturnThis();
 
-vi.mock('../utils/dok1grader-client', () => ({
-  DOK1GraderClient: vi.fn().mockImplementation(() => ({
+vi.mock('../utils/keystone-client', () => ({
+  KeystoneClient: vi.fn().mockImplementation(() => ({
     withUser: mockWithUser,
     linkDok4: mockLinkDok4,
   })),
@@ -27,8 +27,8 @@ beforeEach(() => {
 });
 
 const validEnv = {
-  DOK1GRADER_BASE_URL: 'https://example.com',
-  DOK1GRADER_SERVICE_KEY: 'sk-test-123',
+  KEYSTONE_BASE_URL: 'https://example.com',
+  KEYSTONE_SERVICE_KEY: 'sk-test-123',
 };
 
 const validProps = {
@@ -75,7 +75,7 @@ describe('link_dok4 tool handler', () => {
   });
 
   it('returns error on API failure', async () => {
-    mockLinkDok4.mockRejectedValue(new Error('DOK1Grader API error: 400 - Invalid DOK3 IDs'));
+    mockLinkDok4.mockRejectedValue(new Error('Keystone API error: 400 - Invalid DOK3 IDs'));
 
     const result = await handleLinkDok4(
       { slug: 'bad', spovId: 999, dok3Ids: [20] },

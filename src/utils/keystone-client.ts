@@ -1,5 +1,5 @@
 /**
- * HTTP client for DOK1Grader internal API.
+ * HTTP client for Keystone internal API.
  *
  * Centralizes header injection (service key, user email/name),
  * error handling, and base URL management.
@@ -66,9 +66,9 @@ export interface StatusResponse {
  * AI Writing Signal -- informational label attached to DOK2/3/4 items by the
  * platform's text-integrity analysis. NOT a grading factor.
  *
- * Wire shape: the DOK1Grader internal API emits this field as `aiWritingSignal`
+ * Wire shape: the Keystone internal API emits this field as `aiWritingSignal`
  * (camelCase) with values capitalized (`'Human' | 'AI-Assisted' | 'Mixed' | 'AI'`).
- * The brainlift-mcp client transforms ONCE at deserialization (see
+ * The keystone-mcp client transforms ONCE at deserialization (see
  * `normalizeAiWritingSignal` + `transformAssessmentItem`) into snake_case
  * `ai_writing_signal` with lowercase values. Downstream code (formatters,
  * MCP responses) only ever sees the snake_case form.
@@ -341,7 +341,7 @@ export interface LinkResponse {
   status: string;
 }
 
-export class DOK1GraderClient {
+export class KeystoneClient {
   private baseUrl: string;
   private serviceKey: string;
   private userEmail: string | null = null;
@@ -365,7 +365,7 @@ export class DOK1GraderClient {
 
   /**
    * Fetch the Brainlift markdown template.
-   * Calls GET /api/internal/template on DOK1Grader.
+   * Calls GET /api/internal/template on Keystone.
    */
   async getTemplate(): Promise<string> {
     const response = await this.request('GET', '/api/internal/template');
@@ -375,7 +375,7 @@ export class DOK1GraderClient {
 
   /**
    * Submit markdown for grading.
-   * Calls POST /api/internal/grade on DOK1Grader.
+   * Calls POST /api/internal/grade on Keystone.
    */
   async gradeBrainlift(
     markdown: string,
@@ -389,7 +389,7 @@ export class DOK1GraderClient {
 
   /**
    * List user's brainlifts with pagination.
-   * Calls GET /api/internal/brainlifts on DOK1Grader.
+   * Calls GET /api/internal/brainlifts on Keystone.
    */
   async listBrainlifts(
     page: number = 1,
@@ -408,7 +408,7 @@ export class DOK1GraderClient {
 
   /**
    * Get grading status and progress for a brainlift.
-   * Calls GET /api/internal/brainlifts/:slug/status on DOK1Grader.
+   * Calls GET /api/internal/brainlifts/:slug/status on Keystone.
    */
   async getStatus(slug: string): Promise<StatusResponse> {
     const response = await this.request(
@@ -420,7 +420,7 @@ export class DOK1GraderClient {
 
   /**
    * Get paginated assessment results for a specific DOK level.
-   * Calls GET /api/internal/brainlifts/:slug/assessment on DOK1Grader.
+   * Calls GET /api/internal/brainlifts/:slug/assessment on Keystone.
    */
   async getAssessment(
     slug: string,
@@ -795,7 +795,7 @@ export class DOK1GraderClient {
   }
 
   /**
-   * Make an authenticated request to DOK1Grader.
+   * Make an authenticated request to Keystone.
    */
   private async request(
     method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
@@ -828,7 +828,7 @@ export class DOK1GraderClient {
     if (!response.ok) {
       const errorText = await response.text();
       throw new Error(
-        `DOK1Grader API error: ${response.status} - ${errorText}`,
+        `Keystone API error: ${response.status} - ${errorText}`,
       );
     }
 

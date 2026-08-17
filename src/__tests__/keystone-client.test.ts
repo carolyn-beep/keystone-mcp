@@ -1,5 +1,5 @@
 /**
- * Tests for FR3: DOK1GraderClient HTTP client
+ * Tests for FR3: KeystoneClient HTTP client
  *
  * Tests request headers, error handling, and getTemplate method.
  * Mocks: global fetch
@@ -8,27 +8,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // We'll import the client after creating it
-let DOK1GraderClient: any;
+let KeystoneClient: any;
 
 beforeEach(async () => {
   vi.clearAllMocks();
   vi.restoreAllMocks();
   vi.resetModules();
-  const mod = await import('../utils/dok1grader-client');
-  DOK1GraderClient = mod.DOK1GraderClient;
+  const mod = await import('../utils/keystone-client');
+  KeystoneClient = mod.KeystoneClient;
 });
 
-describe('DOK1GraderClient', () => {
+describe('KeystoneClient', () => {
   describe('constructor', () => {
     it('stores baseUrl and serviceKey', () => {
-      const client = new DOK1GraderClient('https://example.com', 'sk-test-123');
+      const client = new KeystoneClient('https://example.com', 'sk-test-123');
       expect(client).toBeDefined();
     });
   });
 
   describe('withUser', () => {
     it('returns this for chaining', () => {
-      const client = new DOK1GraderClient('https://example.com', 'sk-test-123');
+      const client = new KeystoneClient('https://example.com', 'sk-test-123');
       const result = client.withUser('user@example.com', 'Test User');
       expect(result).toBe(client);
     });
@@ -36,7 +36,7 @@ describe('DOK1GraderClient', () => {
 
   describe('getTemplate', () => {
     it('throws if withUser not called', async () => {
-      const client = new DOK1GraderClient('https://example.com', 'sk-test-123');
+      const client = new KeystoneClient('https://example.com', 'sk-test-123');
       await expect(client.getTemplate()).rejects.toThrow(/withUser/i);
     });
 
@@ -47,7 +47,7 @@ describe('DOK1GraderClient', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      const client = new DOK1GraderClient('https://example.com', 'sk-test-123');
+      const client = new KeystoneClient('https://example.com', 'sk-test-123');
       client.withUser('user@example.com', 'Test User');
       await client.getTemplate();
 
@@ -66,7 +66,7 @@ describe('DOK1GraderClient', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      const client = new DOK1GraderClient('https://example.com', 'sk-test-123');
+      const client = new KeystoneClient('https://example.com', 'sk-test-123');
       client.withUser('u@e.com', 'U');
       await client.getTemplate();
 
@@ -80,7 +80,7 @@ describe('DOK1GraderClient', () => {
         json: () => Promise.resolve({ template: templateContent, format: 'markdown' }),
       }));
 
-      const client = new DOK1GraderClient('https://example.com', 'sk-test-123');
+      const client = new KeystoneClient('https://example.com', 'sk-test-123');
       client.withUser('u@e.com', 'U');
       const result = await client.getTemplate();
 
@@ -94,7 +94,7 @@ describe('DOK1GraderClient', () => {
         text: () => Promise.resolve('Unauthorized'),
       }));
 
-      const client = new DOK1GraderClient('https://example.com', 'sk-test-123');
+      const client = new KeystoneClient('https://example.com', 'sk-test-123');
       client.withUser('u@e.com', 'U');
 
       await expect(client.getTemplate()).rejects.toThrow(/401/);
@@ -103,7 +103,7 @@ describe('DOK1GraderClient', () => {
     it('throws on network error', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')));
 
-      const client = new DOK1GraderClient('https://example.com', 'sk-test-123');
+      const client = new KeystoneClient('https://example.com', 'sk-test-123');
       client.withUser('u@e.com', 'U');
 
       await expect(client.getTemplate()).rejects.toThrow(/Network error/);
@@ -116,7 +116,7 @@ describe('DOK1GraderClient', () => {
       });
       vi.stubGlobal('fetch', mockFetch);
 
-      const client = new DOK1GraderClient('https://example.com/', 'sk-test-123');
+      const client = new KeystoneClient('https://example.com/', 'sk-test-123');
       client.withUser('u@e.com', 'U');
       await client.getTemplate();
 
