@@ -1,7 +1,10 @@
 {
-  "name": "brainlift-mcp",
+  "name": "keystone-mcp",
   "version": "0.1.0",
+  "description": "Model Context Protocol server for the Keystone platform — lets MCP-compatible agents create, grade, curate, and drive sprints on Keystone Documents. Cloudflare Worker + Google OAuth. Published as a portfolio reference.",
   "private": true,
+  "author": "Carolyn Driscoll",
+  "license": "UNLICENSED",
   "scripts": {
     "deploy": "wrangler deploy",
     "dev": "wrangler dev",

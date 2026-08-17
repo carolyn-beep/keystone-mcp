@@ -23,7 +23,13 @@ describe('handleDeleteDokItem', () => {
   it('returns formatted preview when confirm=false', async () => {
     mockDeleteDokItem.mockResolvedValueOnce({
       item: { id: 42, text: 'fact', score: 3 },
-      impact: { unlinked: 2, markedStale: 1, details: ['DOK2 #10 unlinked'] },
+      unlinkedItems: [
+        { id: 10, dokLevel: 2, text: 'summary a' },
+        { id: 11, dokLevel: 2, text: 'summary b' },
+      ],
+      staleDok2Ids: [10],
+      staleDok3Ids: [],
+      staleDok4Ids: [],
     });
 
     const result = await handleDeleteDokItem(
@@ -38,7 +44,7 @@ describe('handleDeleteDokItem', () => {
 
   it('returns formatted result when confirm=true', async () => {
     mockDeleteDokItem.mockResolvedValueOnce({
-      deleted: true, impact: { unlinked: 2, markedStale: 1 },
+      deleted: true, impactSummary: { unlinked: 2, markedStale: 1 },
     });
 
     const result = await handleDeleteDokItem(
