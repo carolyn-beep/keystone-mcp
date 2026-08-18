@@ -42,7 +42,6 @@ app.get('/authorize', async (c) => {
   }
 
   // Auto-approve for MCP clients
-  console.log(`Auto-approving OAuth request for client: ${clientId}`);
   const { state, headers } = await autoApprove(
     c.req.raw,
     oauthReqInfo,

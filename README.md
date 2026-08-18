@@ -1,6 +1,12 @@
 # Keystone MCP
 
+![CI](https://github.com/carolyn-beep/keystone-mcp/actions/workflows/ci.yml/badge.svg)
+
 A [Model Context Protocol](https://modelcontextprotocol.io/) server that lets any MCP-compatible AI agent work with Keystone Documents programmatically — create them, grade them, curate them, and drive a 30-day execution sprint. Built as a Cloudflare Worker with Google OAuth, backed by the Keystone platform.
+
+> **Published as a portfolio reference — view-only, all rights reserved. See [LICENSE](LICENSE).** The setup steps below are included to show how the pieces fit together, not as an invitation to deploy it.
+
+> **Provenance.** The MCP server for the Keystone platform I built at Alpha School (2025–2026), published here as a sanitized copy with permission. Commit dates reflect publication, not original development.
 
 > **Part of the [Keystone](https://github.com/carolyn-beep/keystone) platform.** This is the MCP server that exposes Keystone's grading and knowledge-building tools to external agents. **Evaluating my agentic-tools / integration work?** The fastest reads are [Agent-first design](#agent-first-design) (context engineering + resilient, agent-readable error handling) and [Auth flow](#auth-flow) (service-key + user-identity integration across two services). The platform itself — the tool/skill registry, unified AI client, and DOK1–DOK4 grading pipelines — lives in the [main Keystone repo](https://github.com/carolyn-beep/keystone).
 
@@ -35,6 +41,8 @@ An AI agent connects via MCP, authenticates with Google, and gets access to the 
 | `link_dok3` / `link_dok4` | Link newly-created DOK2s / DOK3s to an existing DOK3 / DOK4 item | Synchronous |
 | `get_stale_items` | List items flagged stale after upstream edits | Paginated |
 | `dismiss_stale` | Mark a stale item as still valid without editing it | Synchronous |
+| `list_experts` | List the experts a brainlift follows, with structured fields and ranking | Synchronous |
+| `create_expert` / `delete_expert` | Add or remove a followed expert; ranking refresh runs asynchronously | Synchronous |
 
 ### Student-only tools
 
@@ -231,11 +239,17 @@ Update the `id` in `wrangler.jsonc` with the returned namespace ID.
 
 ### Keystone service key
 
-The Keystone side needs a row in the `api_keys` table:
+This runs against the **Keystone platform's** database — this repo is a Cloudflare Worker and has no database of its own. Generate a strong random key (don't type a literal), then insert it into Keystone's `api_keys` table:
+
+```bash
+# generate the key
+openssl rand -hex 32
+```
 
 ```sql
+-- run against the Keystone platform DB
 INSERT INTO api_keys (key, name, rate_limit, is_active)
-VALUES ('your-service-api-key', 'keystone-mcp-production', 60, true);
+VALUES ('<paste-the-generated-key>', 'keystone-mcp-production', 60, true);
 ```
 
 This key goes into the MCP server's `KEYSTONE_SERVICE_KEY` env var.
