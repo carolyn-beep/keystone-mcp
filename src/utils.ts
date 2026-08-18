@@ -79,7 +79,9 @@ export async function fetchUpstreamAuthToken({
   });
 
   if (!resp.ok) {
-    console.log(await resp.text());
+    // Log status only — the response body of a failed token exchange can
+    // contain sensitive upstream detail and should not land in Worker logs.
+    console.error(`OAuth token exchange failed: ${resp.status} ${resp.statusText}`);
     return [
       null,
       new Response('Failed to fetch access token', { status: 500 }),

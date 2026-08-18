@@ -41,6 +41,8 @@ An AI agent connects via MCP, authenticates with Google, and gets access to the 
 | `link_dok3` / `link_dok4` | Link newly-created DOK2s / DOK3s to an existing DOK3 / DOK4 item | Synchronous |
 | `get_stale_items` | List items flagged stale after upstream edits | Paginated |
 | `dismiss_stale` | Mark a stale item as still valid without editing it | Synchronous |
+| `list_experts` | List the experts a brainlift follows, with structured fields and ranking | Synchronous |
+| `create_expert` / `delete_expert` | Add or remove a followed expert; ranking refresh runs asynchronously | Synchronous |
 
 ### Student-only tools
 
