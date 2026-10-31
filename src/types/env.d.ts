@@ -14,7 +14,4 @@ export interface Env {
 export interface Props extends Record<string, unknown> {
   name: string;
   email: string;
-  accessToken: string;
-  tokenType: string;
-  expiresAt: number;
 }

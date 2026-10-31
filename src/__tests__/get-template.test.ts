@@ -37,9 +37,6 @@ describe('get_template tool handler', () => {
   const validProps = {
     email: 'user@example.com',
     name: 'Test User',
-    accessToken: 'tok-123',
-    tokenType: 'Bearer',
-    expiresAt: Date.now() + 3600000,
   };
 
   it('returns template content on success', async () => {

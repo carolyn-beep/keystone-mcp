@@ -105,12 +105,10 @@ export async function fetchUpstreamAuthToken({
   return [tokenData, null];
 }
 
-// Context from the auth process, encrypted & stored in the auth token
-// and provided to BrainliftMCP as this.props
+// Context from the auth process, encrypted & stored by the OAuth provider
+// and provided to the MCP agent as this.props. Identity only; the Google
+// access token is not retained.
 export type Props = {
   name: string;
   email: string;
-  accessToken: string;
-  tokenType: string;
-  expiresAt: number;
 };

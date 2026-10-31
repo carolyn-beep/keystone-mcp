@@ -52,9 +52,6 @@ interface StudentEnv {
 interface StudentProps extends Record<string, unknown> {
   name: string;
   email: string;
-  accessToken: string;
-  tokenType: string;
-  expiresAt: number;
 }
 
 export class BrainliftStudentMCP extends McpAgent<
@@ -63,7 +60,7 @@ export class BrainliftStudentMCP extends McpAgent<
   StudentProps
 > {
   server = new McpServer({
-    name: 'Brainlift Student MCP',
+    name: 'Keystone Student MCP',
     version: '0.1.0',
     instructions: STUDENT_MCP_INSTRUCTIONS,
   });
