@@ -169,6 +169,9 @@ export default {
       accessTokenTTL: 24 * 60 * 60,
     });
 
-    return provider.fetch(request, adaptedEnv, ctx);
+    // workers-oauth-provider bundles its own @cloudflare/workers-types whose
+    // ExecutionContext differs from the generated worker-configuration.d.ts;
+    // the runtime object is the same, so bridge the nominal type gap here.
+    return provider.fetch(request, adaptedEnv, ctx as any);
   },
 };

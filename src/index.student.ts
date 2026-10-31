@@ -189,6 +189,8 @@ export default {
       accessTokenTTL: 24 * 60 * 60,
     });
 
-    return provider.fetch(request, adaptedEnv, ctx);
+    // See src/index.ts: bridge the ExecutionContext type mismatch between the
+    // generated worker types and workers-oauth-provider's bundled types.
+    return provider.fetch(request, adaptedEnv, ctx as any);
   },
 };
