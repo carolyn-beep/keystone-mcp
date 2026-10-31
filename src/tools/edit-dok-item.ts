@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatEditResponse, formatErrorGuidance } from '../utils/formatters';
@@ -63,7 +64,7 @@ export function registerEditDokItem(server: McpServer, env: ToolEnv, props: Tool
 
 NOTE: This tool only changes text. It cannot change source URLs or linked items. If the problem is a wrong source URL on a DOK1 fact, use delete_dok_item to remove it and create_dok1 to add a corrected one. If a DOK3 or DOK4 has weak foundation items dragging its score down, delete those bad DOK1s or DOK2s underneath it, build better ones, then use link_dok3 or link_dok4 to attach the stronger evidence.`,
     {
-      slug: z.string().describe('Brainlift slug'),
+      slug: slugSchema.describe('Brainlift slug'),
       dok: z.number().min(1).max(4).describe('DOK level: 1=Facts, 2=Summaries, 3=Insights, 4=SPOVs'),
       itemId: z.number().describe('Item ID (the numeric ID shown in brackets in get_brainlift_assessment output, e.g. [ID: 24288])'),
       text: z.string().describe('New text that addresses the grading feedback. For DOK2: one summary point per line, separated by newlines.'),

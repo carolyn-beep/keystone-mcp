@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatDismissStale, formatErrorGuidance } from '../utils/formatters';
@@ -62,7 +63,7 @@ export function registerDismissStale(server: McpServer, env: ToolEnv, props: Too
 
 Before deciding, read the item's current feedback via get_brainlift_assessment and consider what changed underneath (the stale reason tells you). If the foundation change means the current feedback no longer makes sense for this item, use edit_dok_item to address the feedback while incorporating the updated foundation -- the context-aware regrading system will recognize the improvement. If the item still stands on its own despite the change below, dismissing is the right call.`,
     {
-      slug: z.string().describe('Brainlift slug'),
+      slug: slugSchema.describe('Brainlift slug'),
       dok: z.number().min(1).max(4).describe('DOK level: 1=Facts, 2=Summaries, 3=Insights, 4=SPOVs'),
       itemId: z.number().describe('Item ID to dismiss stale flag for (from get_stale_items output)'),
     },

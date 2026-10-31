@@ -267,7 +267,7 @@ export function formatAssessmentDOK4(
   for (let i = 0; i < result.items.length; i++) {
     const item = result.items[i];
 
-    if (item.status === 'grading' || item.status === 'linked') {
+    if (item.status === 'grading' || item.status === 'regrading' || item.status === 'linked') {
       lines.push(`${i + 1}. [ID: ${item.id}] [REGRADING] "${item.text}"`);
     } else if (item.status === 'rejected') {
       lines.push(`${i + 1}. [ID: ${item.id}] [REJECTED] "${item.text}"`);

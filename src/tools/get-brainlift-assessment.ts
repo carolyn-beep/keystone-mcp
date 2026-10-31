@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatStatus, formatAssessment, formatErrorGuidance } from '../utils/formatters';
@@ -120,7 +121,7 @@ export function registerGetBrainliftAssessment(
     'get_brainlift_assessment',
     'Get grading status or assessment results for a brainlift. Use statusOnly=true to poll progress (lightweight). Use dok=1-4 to get per-level results. Use itemId to check a specific item after edit/create (most efficient polling). Use sortBy=score&order=asc to find lowest-scoring items. Use status=regrading to see items currently being regraded.',
     {
-      slug: z.string().describe(
+      slug: slugSchema.describe(
         'The brainlift slug returned by grade_brainlift or list_brainlifts.',
       ),
       dok: z.number().int().min(1).max(4).describe(

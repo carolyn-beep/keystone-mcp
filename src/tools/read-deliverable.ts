@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatReadDeliverable, formatErrorGuidance } from '../utils/formatters';
@@ -59,7 +60,7 @@ export function registerReadDeliverable(server: McpServer, env: ToolEnv, props: 
     'read_deliverable',
     'Read the current deliverable markdown and Doc URL for a task.',
     {
-      brainliftSlug: z.string().min(1).describe('Brainlift slug'),
+      brainliftSlug: slugSchema.describe('Brainlift slug'),
       taskId: z.number().int().positive().describe('Task ID'),
     },
     async (args) => handleReadDeliverable(args, env, props),

@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { KeystoneClient, normalizeAiWritingSignal, transformAssessmentItem } from './keystone-client';
+import { KeystoneClient, encodeSlug, normalizeAiWritingSignal, transformAssessmentItem } from './keystone-client';
 
 // Mock global fetch
 const mockFetch = vi.fn();
@@ -255,6 +255,33 @@ describe('KeystoneClient CRUD methods', () => {
       expect(url).toBe('https://api.example.com/api/internal/brainlifts/my-slug/experts/12');
       expect(init.method).toBe('DELETE');
       expect(init.body).toBeUndefined();
+    });
+  });
+
+  // ── slug encoding ──
+
+  describe('slug encoding', () => {
+    it('percent-encodes path separators and reserved characters in the slug', async () => {
+      mockFetch.mockResolvedValueOnce(okJson({ dok1: [], dok2: [], dok3: [], dok4: [] }));
+
+      await client.getStaleItems('../tasks');
+
+      const [url] = mockFetch.mock.calls[0];
+      expect(url).toBe('https://api.example.com/api/internal/brainlifts/..%2Ftasks/stale');
+      expect(url).not.toContain('/../');
+    });
+
+    it('encodes the slug on nested item paths too', async () => {
+      mockFetch.mockResolvedValueOnce(okJson({ dismissed: true }));
+
+      await client.dismissStale('a?b#c', 2, 10);
+
+      const [url] = mockFetch.mock.calls[0];
+      expect(url).toBe('https://api.example.com/api/internal/brainlifts/a%3Fb%23c/dok/2/items/10/dismiss-stale');
+    });
+
+    it('leaves a well-formed slug unchanged', () => {
+      expect(encodeSlug('my-brainlift-2')).toBe('my-brainlift-2');
     });
   });
 

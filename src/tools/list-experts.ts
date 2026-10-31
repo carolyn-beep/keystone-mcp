@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatErrorGuidance, formatExpertsList } from '../utils/formatters';
@@ -60,7 +61,7 @@ export function registerListExperts(server: McpServer, env: ToolEnv, props: Tool
     'list_experts',
     'List experts for an existing brainlift, including structured fields and current ranking.',
     {
-      slug: z.string().describe('Brainlift slug'),
+      slug: slugSchema.describe('Brainlift slug'),
     },
     async (args) => handleListExperts(args, env, props),
   );

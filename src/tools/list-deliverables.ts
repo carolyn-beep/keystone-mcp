@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatDeliverables, formatErrorGuidance } from '../utils/formatters';
@@ -61,7 +62,7 @@ export function registerListDeliverables(server: McpServer, env: ToolEnv, props:
     'list_deliverables',
     'List deliverables for a brainlift, optionally filtered to one plan via planId.',
     {
-      brainliftSlug: z.string().min(1).describe('Brainlift slug'),
+      brainliftSlug: slugSchema.describe('Brainlift slug'),
       planId: z.number().int().positive().optional().describe('Optional plan ID filter'),
     },
     async (args) => handleListDeliverables(args, env, props),

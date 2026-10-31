@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatStaleItems, formatErrorGuidance } from '../utils/formatters';
@@ -60,7 +61,7 @@ export function registerGetStaleItems(server: McpServer, env: ToolEnv, props: To
     'get_stale_items',
     'List all stale items in a brainlift. An item is "stale" when a foundation item it depends on (lower DOK level) was edited or deleted, meaning its grading may be based on outdated content. Call this after any edit_dok_item or delete_dok_item to see what was affected. For each stale item, decide: use edit_dok_item to update it if the content is affected by the change, or dismiss_stale if it is still valid despite the foundation change.',
     {
-      slug: z.string().describe('Brainlift slug'),
+      slug: slugSchema.describe('Brainlift slug'),
     },
     async (args) => handleGetStaleItems(args, env, props),
   );

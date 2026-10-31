@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatCreateResponse, formatErrorGuidance } from '../utils/formatters';
@@ -65,7 +66,7 @@ export function registerCreateDok4(server: McpServer, env: ToolEnv, props: ToolP
     'create_dok4',
     "Add a new DOK4 SPOV (Spiky Point of View) to an existing brainlift. A SPOV is a single punchy line that takes a side; observations and hedged takes get rejected. Review quality guidelines from get_template first. Linked DOK3 insights must be in 'graded' status. Triggers async grading; poll get_brainlift_assessment to check completion.",
     {
-      slug: z.string().describe('Brainlift slug'),
+      slug: slugSchema.describe('Brainlift slug'),
       text: z.string().describe('A single punchy, quotable line that takes a side. Not a paragraph, not a hedged take. The DOK1-2-3 chain is the justification; the SPOV itself does not explain itself.'),
       linkedDok3Ids: z.array(z.number()).min(1).describe('IDs of DOK3 insights supporting this SPOV (must be graded, not pending)'),
       primaryDok3Id: z.number().describe('ID of the primary DOK3 insight (must be in linkedDok3Ids)'),

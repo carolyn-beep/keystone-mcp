@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatActivePlan, formatNoActivePlan, formatErrorGuidance } from '../utils/formatters';
@@ -67,7 +68,7 @@ export function registerGetPlan(server: McpServer, env: ToolEnv, props: ToolProp
     'get_plan',
     'Get the active sprint plan for a brainlift. Returns a clear no-active-plan message when none exists.',
     {
-      brainliftSlug: z.string().min(1).describe('Brainlift slug'),
+      brainliftSlug: slugSchema.describe('Brainlift slug'),
     },
     async (args) => handleGetPlan(args, env, props),
   );

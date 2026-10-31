@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatLinkResponse, formatErrorGuidance } from '../utils/formatters';
@@ -60,7 +61,7 @@ export function registerLinkDok3(server: McpServer, env: ToolEnv, props: ToolPro
     'link_dok3',
     'Attach additional DOK2 summaries to an existing DOK3 insight to strengthen its evidence base. Use this when the grading feedback says the insight needs more research or stronger foundation -- go build new DOK1 facts and DOK2 summaries first, then link those DOK2s here. This preserves the insight\'s version history and feedback continuity (unlike delete + recreate). Triggers an automatic regrade so the score reflects the expanded foundation. The insight text stays the same -- only the supporting evidence changes. Ensure the DOK2s are fully graded (not grading or regrading) before linking to avoid failures.',
     {
-      slug: z.string().describe('Brainlift slug'),
+      slug: slugSchema.describe('Brainlift slug'),
       insightId: z.number().int().describe('ID of the existing DOK3 insight (from get_brainlift_assessment)'),
       dok2Ids: z.array(z.number().int()).min(1).describe('IDs of DOK2 summaries to link. These must belong to the same brainlift. Already-linked DOK2s are silently skipped.'),
     },

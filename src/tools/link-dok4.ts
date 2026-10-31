@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatLinkResponse, formatErrorGuidance } from '../utils/formatters';
@@ -60,7 +61,7 @@ export function registerLinkDok4(server: McpServer, env: ToolEnv, props: ToolPro
     'link_dok4',
     "Attach additional DOK3 insights to an existing DOK4 SPOV when the SPOV's grounding is weak (S3 Grounded & Traceable). Use this when grading feedback says the chain does not actually support the leap to this position; go build new DOK3 insights first, then link them here. This preserves the SPOV's version history and feedback continuity (unlike delete + recreate). Triggers an automatic regrade. The SPOV text stays the same; only the supporting chain changes. Optionally update the primary DOK3. Ensure the new DOK3s are fully graded (not grading or regrading) before linking to avoid failures.",
     {
-      slug: z.string().describe('Brainlift slug'),
+      slug: slugSchema.describe('Brainlift slug'),
       spovId: z.number().int().describe('ID of the existing DOK4 SPOV (from get_brainlift_assessment)'),
       dok3Ids: z.array(z.number().int()).min(1).describe('IDs of DOK3 insights to link. Must be graded and belong to the same brainlift. Already-linked DOK3s are silently skipped.'),
       newPrimaryDok3Id: z.number().int().optional().describe('If provided, updates which DOK3 is the primary insight for this SPOV. Must be in the combined set of existing + new links.'),

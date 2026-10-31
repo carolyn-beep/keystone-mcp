@@ -254,6 +254,28 @@ describe('formatAssessmentDOK4', () => {
     expect(result).toContain('Insight about X');
   });
 
+  it('shows REGRADING for SPOVs in grading, regrading, or linked status', () => {
+    for (const status of ['grading', 'regrading', 'linked']) {
+      const result = formatAssessmentDOK4(
+        {
+          items: [
+            {
+              id: 7, text: 'In-flight SPOV', status, score: 3,
+              rationale: 'stale rationale', feedback: null,
+              rejectionReason: null, rejectionCategory: null,
+              linkedInsights: [], criteriaSummary: null,
+            },
+          ],
+          pagination: { page: 1, pageSize: 20, totalItems: 1, totalPages: 1 },
+        },
+        'summary',
+      );
+
+      expect(result, `status=${status}`).toContain('[REGRADING]');
+      expect(result, `status=${status}`).not.toContain('[Score:');
+    }
+  });
+
   it('shows rejection info for rejected SPOVs', () => {
     const result = formatAssessmentDOK4(
       {

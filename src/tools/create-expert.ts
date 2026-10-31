@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatCreatedExperts, formatErrorGuidance } from '../utils/formatters';
@@ -68,7 +69,7 @@ export function registerCreateExpert(server: McpServer, env: ToolEnv, props: Too
     'create_expert',
     'Add one or more experts to an existing brainlift. Ranking refresh runs asynchronously after creation.',
     {
-      slug: z.string().describe('Brainlift slug'),
+      slug: slugSchema.describe('Brainlift slug'),
       experts: z.array(expertInputSchema).min(1).describe('Experts to add'),
     },
     async (args) => handleCreateExpert(args, env, props),

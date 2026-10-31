@@ -5,6 +5,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient, type GeneratePlanInput } from '../utils/keystone-client';
 import { formatGeneratedPlan, formatErrorGuidance } from '../utils/formatters';
@@ -92,11 +93,11 @@ export function registerGeneratePlan(server: McpServer, env: ToolEnv, props: Too
     'generate_plan',
     GENERATE_PLAN_DESCRIPTION,
     {
-      brainliftSlug: z.string().min(1).describe('Brainlift slug'),
+      brainliftSlug: slugSchema.describe('Brainlift slug'),
       localDate: z.string().describe("Student's local date in YYYY-MM-DD format. The backend uses this to schedule task dates."),
       diagnosis: z.object({
         goalRaw: z.string().min(1).max(2000).describe(
-          "The student's business ambition in their own words. Preserve their vagueness; do not polish or restate in your voice. If the BrainLift states a goal clearly, use it; otherwise ask the student for their ambition directly.",
+          "The student's business ambition in their own words. Preserve their vagueness; do not polish or restate in your voice. If the brainlift states a goal clearly, use it; otherwise ask the student for their ambition directly.",
         ),
         currentState: z.string().min(1).max(4000).describe(
           "Describe where the student's BUSINESS stands right now — what they believe about the market, what they've validated with real people, what they've built or sketched, what they're still unsure about. Write it the way a startup advisor would describe a founder's situation to another advisor. Keep to 2-5 sentences.",

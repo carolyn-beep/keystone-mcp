@@ -341,6 +341,16 @@ export interface LinkResponse {
   status: string;
 }
 
+/**
+ * Encode a brainlift slug for use as a single URL path segment. Tool inputs
+ * are already validated against `slugSchema`, but the client never trusts
+ * its caller: any separator or reserved character is percent-encoded so it
+ * cannot alter the upstream path.
+ */
+export function encodeSlug(slug: string): string {
+  return encodeURIComponent(slug);
+}
+
 export class KeystoneClient {
   private baseUrl: string;
   private serviceKey: string;
@@ -413,7 +423,7 @@ export class KeystoneClient {
   async getStatus(slug: string): Promise<StatusResponse> {
     const response = await this.request(
       'GET',
-      `/api/internal/brainlifts/${slug}/status`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/status`,
     );
     return (await response.json()) as StatusResponse;
   }
@@ -448,7 +458,7 @@ export class KeystoneClient {
 
     const response = await this.request(
       'GET',
-      `/api/internal/brainlifts/${slug}/assessment?${params.toString()}`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/assessment?${params.toString()}`,
     );
     const raw = (await response.json()) as AssessmentResponse;
 
@@ -470,7 +480,7 @@ export class KeystoneClient {
   async listExperts(slug: string): Promise<ExpertRecord[]> {
     const response = await this.request(
       'GET',
-      `/api/internal/brainlifts/${slug}/experts`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/experts`,
     );
     return (await response.json()) as ExpertRecord[];
   }
@@ -482,7 +492,7 @@ export class KeystoneClient {
   async createExperts(slug: string, experts: ExpertInput[]): Promise<ExpertRecord[]> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/experts`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/experts`,
       { experts },
     );
     return (await response.json()) as ExpertRecord[];
@@ -495,7 +505,7 @@ export class KeystoneClient {
   async deleteExpert(slug: string, expertId: number): Promise<void> {
     await this.request(
       'DELETE',
-      `/api/internal/brainlifts/${slug}/experts/${expertId}`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/experts/${expertId}`,
     );
   }
 
@@ -508,7 +518,7 @@ export class KeystoneClient {
   async generatePlan(slug: string, input: GeneratePlanInput): Promise<GeneratedPlanResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/plans`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/plans`,
       input,
     );
     return (await response.json()) as GeneratedPlanResponse;
@@ -521,7 +531,7 @@ export class KeystoneClient {
   async getPlan(slug: string): Promise<GeneratedPlanResponse | null> {
     const response = await this.request(
       'GET',
-      `/api/internal/brainlifts/${slug}/plans/active`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/plans/active`,
     );
     const result = (await response.json()) as GeneratedPlanResponse | {
       plan: null;
@@ -540,7 +550,7 @@ export class KeystoneClient {
     const queryString = params.toString();
     const response = await this.request(
       'GET',
-      `/api/internal/brainlifts/${slug}/tasks${queryString ? `?${queryString}` : ''}`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/tasks${queryString ? `?${queryString}` : ''}`,
     );
     return (await response.json()) as TaskListItem[];
   }
@@ -566,7 +576,7 @@ export class KeystoneClient {
   async getTask(slug: string, taskId: number): Promise<TaskDetailResponse> {
     const response = await this.request(
       'GET',
-      `/api/internal/brainlifts/${slug}/tasks/${taskId}`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/tasks/${taskId}`,
     );
     return (await response.json()) as TaskDetailResponse;
   }
@@ -582,7 +592,7 @@ export class KeystoneClient {
   ): Promise<DeliverableWriteResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/tasks/${taskId}/deliverable`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/tasks/${taskId}/deliverable`,
       input,
     );
     return (await response.json()) as DeliverableWriteResponse;
@@ -595,7 +605,7 @@ export class KeystoneClient {
   async readDeliverable(slug: string, taskId: number): Promise<ReadDeliverableResponse> {
     const response = await this.request(
       'GET',
-      `/api/internal/brainlifts/${slug}/tasks/${taskId}/deliverable`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/tasks/${taskId}/deliverable`,
     );
     return (await response.json()) as ReadDeliverableResponse;
   }
@@ -611,7 +621,7 @@ export class KeystoneClient {
   ): Promise<DeliverableWriteResponse> {
     const response = await this.request(
       'PUT',
-      `/api/internal/brainlifts/${slug}/tasks/${taskId}/deliverable`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/tasks/${taskId}/deliverable`,
       input,
     );
     return (await response.json()) as DeliverableWriteResponse;
@@ -629,7 +639,7 @@ export class KeystoneClient {
     const queryString = params.toString();
     const response = await this.request(
       'GET',
-      `/api/internal/brainlifts/${slug}/deliverables${queryString ? `?${queryString}` : ''}`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/deliverables${queryString ? `?${queryString}` : ''}`,
     );
     return (await response.json()) as DeliverableListResponse;
   }
@@ -647,7 +657,7 @@ export class KeystoneClient {
   ): Promise<EditResponse> {
     const response = await this.request(
       'PATCH',
-      `/api/internal/brainlifts/${slug}/dok/${dok}/items/${itemId}`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/dok/${dok}/items/${itemId}`,
       { text },
     );
     return (await response.json()) as EditResponse;
@@ -665,7 +675,7 @@ export class KeystoneClient {
     const previewParam = preview ? '?preview=true' : '';
     const response = await this.request(
       'DELETE',
-      `/api/internal/brainlifts/${slug}/dok/${dok}/items/${itemId}${previewParam}`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/dok/${dok}/items/${itemId}${previewParam}`,
     );
     return (await response.json()) as DeletePreviewResponse | DeleteResultResponse;
   }
@@ -679,7 +689,7 @@ export class KeystoneClient {
   ): Promise<CreateResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok1`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/dok1`,
       data,
     );
     return (await response.json()) as CreateResponse;
@@ -699,7 +709,7 @@ export class KeystoneClient {
   ): Promise<CreateResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok2`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/dok2`,
       data,
     );
     return (await response.json()) as CreateResponse;
@@ -714,7 +724,7 @@ export class KeystoneClient {
   ): Promise<CreateResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok3`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/dok3`,
       data,
     );
     return (await response.json()) as CreateResponse;
@@ -729,7 +739,7 @@ export class KeystoneClient {
   ): Promise<CreateResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok4`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/dok4`,
       data,
     );
     return (await response.json()) as CreateResponse;
@@ -741,7 +751,7 @@ export class KeystoneClient {
   async getStaleItems(slug: string): Promise<StaleResponse> {
     const response = await this.request(
       'GET',
-      `/api/internal/brainlifts/${slug}/stale`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/stale`,
     );
     return (await response.json()) as StaleResponse;
   }
@@ -756,7 +766,7 @@ export class KeystoneClient {
   ): Promise<DismissStaleResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok/${dok}/items/${itemId}/dismiss-stale`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/dok/${dok}/items/${itemId}/dismiss-stale`,
     );
     return (await response.json()) as DismissStaleResponse;
   }
@@ -771,7 +781,7 @@ export class KeystoneClient {
   ): Promise<LinkResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok3/${insightId}/links`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/dok3/${insightId}/links`,
       { dok2Ids },
     );
     return (await response.json()) as LinkResponse;
@@ -788,7 +798,7 @@ export class KeystoneClient {
   ): Promise<LinkResponse> {
     const response = await this.request(
       'POST',
-      `/api/internal/brainlifts/${slug}/dok4/${spovId}/links`,
+      `/api/internal/brainlifts/${encodeSlug(slug)}/dok4/${spovId}/links`,
       { dok3Ids, ...(newPrimaryDok3Id != null ? { newPrimaryDok3Id } : {}) },
     );
     return (await response.json()) as LinkResponse;

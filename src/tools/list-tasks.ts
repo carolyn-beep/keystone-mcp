@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatTaskList, formatCrossBrainliftTaskList, formatErrorGuidance } from '../utils/formatters';
@@ -82,7 +83,7 @@ export function registerListTasks(server: McpServer, env: ToolEnv, props: ToolPr
     'list_tasks',
     "List sprint tasks. Omit brainliftSlug to see tasks across every brainlift the student has access to (useful for 'what's on my plate today?'). Pass brainliftSlug to scope to a single brainlift. Combine with includePastDue=true + localDate to get today's tasks plus any overdue incompletes.",
     {
-      brainliftSlug: z.string().min(1).optional().describe('Brainlift slug. Omit to list tasks across all brainlifts the student has access to.'),
+      brainliftSlug: slugSchema.optional().describe('Brainlift slug. Omit to list tasks across all brainlifts the student has access to.'),
       date: z.string().optional().describe('Filter by scheduled date (YYYY-MM-DD)'),
       week: z.number().int().min(1).max(5).optional().describe('Filter by sprint week number (1-5). Only meaningful when brainliftSlug is provided.'),
       state: z.enum(['all', 'complete', 'incomplete']).optional().describe('Filter by completion state'),

@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { slugSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import type { DeletePreviewResponse, DeleteResultResponse } from '../utils/keystone-client';
@@ -68,13 +69,13 @@ export async function handleDeleteDokItem(
 export function registerDeleteDokItem(server: McpServer, env: ToolEnv, props: ToolProps): void {
   server.tool(
     'delete_dok_item',
-    `Delete a DOK item. Deletion is a curation tool -- use it alongside editing to shape a BrainLift toward quality, not just volume.
+    `Delete a DOK item. Deletion is a curation tool -- use it alongside editing to shape a brainlift toward quality, not just volume.
 
 EDIT vs DELETE -- it depends on context:
 - If the feedback points to fixable text problems (imprecise language, missing connection to purpose), edit.
 - If the problem is structural (wrong source URL, irrelevant source, weak claim that can't be salvaged), delete.
-- A source that has nothing to do with the rest of the BrainLift should be trimmed entirely -- delete its DOK1 facts and DOK2 summaries.
-- Low-scoring items drag down foundation scores for everything built on top. A swollen BrainLift with hundreds of weak facts benefits more from pruning than from editing each one. A small BrainLift might need every item, so edit first.
+- A source that has nothing to do with the rest of the brainlift should be trimmed entirely -- delete its DOK1 facts and DOK2 summaries.
+- Low-scoring items drag down foundation scores for everything built on top. A swollen brainlift with hundreds of weak facts benefits more from pruning than from editing each one. A small brainlift might need every item, so edit first.
 - Scores improve not just by making items better, but by removing items that dilute quality. Use get_brainlift_assessment with sortBy=score&order=asc to find the weakest items and assess whether they're worth the effort.
 
 Common workflows:
@@ -85,7 +86,7 @@ Common workflows:
 
 First call (confirm=false) returns an impact preview showing what will be affected. Review the cascade, then call again with confirm=true to execute.`,
     {
-      slug: z.string().describe('Brainlift slug'),
+      slug: slugSchema.describe('Brainlift slug'),
       dok: z.number().min(1).max(4).describe('DOK level: 1=Facts, 2=Summaries, 3=Insights, 4=SPOVs'),
       itemId: z.number().describe('Item ID (from get_brainlift_assessment output)'),
       confirm: z.boolean().default(false).describe('false = preview impact only (safe). true = execute deletion (irreversible).'),
