@@ -347,21 +347,21 @@ describe('AI Writing Signal in assessment formatters', () => {
     });
   });
 
-  describe('negative assertion: external label is "AI Writing Signal", never "Pangram"', () => {
-    it('does not leak the internal codename in DOK2 formatter output', () => {
+  describe('negative assertion: external label is "AI Writing Signal", never the vendor name', () => {
+    it('does not leak the vendor name in DOK2 formatter output', () => {
       const out = formatAssessmentDOK2({ items: [dok2Item('human')], pagination });
       expect(out).not.toContain('Pangram');
       expect(out).not.toContain('pangram');
     });
 
-    it('does not leak the internal codename in DOK3 formatter output (summary or full)', () => {
+    it('does not leak the vendor name in DOK3 formatter output (summary or full)', () => {
       const summary = formatAssessmentDOK3({ items: [dok3Item('human')], pagination });
       const full = formatAssessmentDOK3({ items: [dok3Item('human')], pagination }, 'full');
       expect(summary).not.toContain('Pangram');
       expect(full).not.toContain('Pangram');
     });
 
-    it('does not leak the internal codename in DOK4 formatter output', () => {
+    it('does not leak the vendor name in DOK4 formatter output', () => {
       const out = formatAssessmentDOK4({ items: [dok4Item('human')], pagination });
       expect(out).not.toContain('Pangram');
     });
@@ -394,7 +394,7 @@ describe('BRAINLIFT_MCP_INSTRUCTIONS: AI Writing Signal framing (Spec 04)', () =
     expect(BRAINLIFT_MCP_INSTRUCTIONS).toContain('off-platform');
   });
 
-  it('does not use the internal codename "Pangram"', () => {
+  it('does not use the vendor name "Pangram"', () => {
     expect(BRAINLIFT_MCP_INSTRUCTIONS).not.toContain('Pangram');
     expect(BRAINLIFT_MCP_INSTRUCTIONS).not.toContain('pangram');
   });

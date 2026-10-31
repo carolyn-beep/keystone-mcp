@@ -39,7 +39,7 @@ An AI agent connects via MCP, authenticates with Google, and gets access to the 
 | `edit_dok_item` | Edit an existing DOK item; retriggers grading | Fire-and-forget |
 | `delete_dok_item` | Delete a DOK item; cascades staleness to linked downstream items | Synchronous |
 | `link_dok3` / `link_dok4` | Link newly-created DOK2s / DOK3s to an existing DOK3 / DOK4 item | Synchronous |
-| `get_stale_items` | List items flagged stale after upstream edits | Paginated |
+| `get_stale_items` | List items flagged stale after upstream edits | Synchronous |
 | `dismiss_stale` | Mark a stale item as still valid without editing it | Synchronous |
 | `list_experts` | List the experts a brainlift follows, with structured fields and ranking | Synchronous |
 | `create_expert` / `delete_expert` | Add or remove a followed expert; ranking refresh runs asynchronously | Synchronous |
@@ -55,7 +55,7 @@ An AI agent connects via MCP, authenticates with Google, and gets access to the 
 | `save_deliverable` | Create a Google Doc deliverable for a task | Synchronous |
 | `read_deliverable` | Read the current contents of a task's deliverable | Synchronous |
 | `update_deliverable` | Replace the contents of a deliverable with new markdown | Synchronous |
-| `list_deliverables` | List all deliverables across plans for a brainlift | Paginated |
+| `list_deliverables` | List all deliverables across plans for a brainlift | Synchronous |
 
 ## Architecture
 
@@ -75,15 +75,15 @@ An AI agent connects via MCP, authenticates with Google, and gets access to the 
 **Two repos, two deployment targets:**
 
 - **This repo** (`keystone-mcp/`) -- Cloudflare Worker. Handles MCP protocol, Google OAuth, tool dispatch, and response formatting.
-- **KeystoneV3** -- Node/Express on Render. Handles parsing, extraction, grading pipeline, and data storage. Exposes `/api/internal/*` endpoints behind service API key auth.
+- **The Keystone platform repo** -- Node/Express on Render. Handles parsing, extraction, grading pipeline, and data storage. Exposes `/api/internal/*` endpoints behind service API key auth.
 
 The MCP server is a thin orchestration layer. All grading logic lives in Keystone.
 
 ## Auth flow
 
 1. AI agent connects to MCP server
-2. MCP redirects to Google OAuth (scopes: `openid email profile`)
-3. User consents, MCP stores Google profile (name, email) as Durable Object props
+2. MCP redirects to Google OAuth (scopes: `email profile`). The OAuth `state` is HMAC-signed and bound to a short-lived nonce cookie; on callback the signature, nonce, and the client's registered redirect URI are all re-validated before anything else happens.
+3. User consents. MCP requires a verified Google email (and, if `HOSTED_DOMAIN` is set, an email on that domain), then stores the Google profile (name, email) as user props, encrypted in KV by the OAuth provider. The Google access token is not retained.
 4. On each tool call, MCP sends to Keystone:
    - `X-Service-Key` header (validates the MCP server itself)
    - `X-User-Email` / `X-User-Name` headers (identifies the end user)
@@ -207,7 +207,17 @@ GOOGLE_CLIENT_SECRET=your-google-client-secret
 COOKIE_ENCRYPTION_KEY=random-32-char-string
 KEYSTONE_BASE_URL=http://localhost:5000
 KEYSTONE_SERVICE_KEY=your-service-api-key
+# Optional. When set, only verified Google accounts on this domain may sign in.
+# HOSTED_DOMAIN=example.com
 ```
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | yes | Google OAuth 2.0 web client credentials |
+| `COOKIE_ENCRYPTION_KEY` | yes | HMAC secret for the approval cookie and the signed OAuth `state` |
+| `KEYSTONE_BASE_URL` | yes | Base URL of the Keystone platform API |
+| `KEYSTONE_SERVICE_KEY` | yes | Service API key issued by Keystone |
+| `HOSTED_DOMAIN` | no | Allow-list domain. When set, the callback rejects (403) any Google account whose verified email is not `@<HOSTED_DOMAIN>`, and Google's login screen is pre-filtered via `hd`. When unset, any verified Google account is accepted. |
 
 For production, set these as Cloudflare Worker secrets:
 
@@ -218,7 +228,7 @@ npx wrangler secret put COOKIE_ENCRYPTION_KEY
 npx wrangler secret put KEYSTONE_SERVICE_KEY
 ```
 
-`KEYSTONE_BASE_URL` is set in `wrangler.jsonc` as a plaintext var (different per environment).
+`KEYSTONE_BASE_URL` is set in `wrangler.jsonc` as a plaintext var (different per environment); the checked-in values are placeholders to replace with your own hosts. `HOSTED_DOMAIN`, if used, can be set the same way.
 
 ### Cloudflare resources
 
@@ -280,14 +290,14 @@ npm run deploy                                         # wrangler deploy (defaul
 **Student variant — prod:**
 
 ```bash
-npx wrangler deploy --config wrangler.student.jsonc    # → keystone-mcp-student (prod: brainliftcentral.com)
+npx wrangler deploy --config wrangler.student.jsonc    # → keystone-mcp-student (prod)
 ```
 
 **Student variant — staging:**
 
 ```bash
 npx wrangler deploy --config wrangler.student.jsonc --env staging
-# → keystone-mcp-student-staging (staging: brainlift-platform.onrender.com)
+# → keystone-mcp-student-staging (staging)
 ```
 
 The staging env block lives in `wrangler.student.jsonc` under `env.staging`. It publishes as a separate Cloudflare Worker (`keystone-mcp-student-staging`) with its own `KEYSTONE_BASE_URL` pointing at the staging backend. Secrets (OAuth credentials, cookie key, staging service API key) must be set per-env:

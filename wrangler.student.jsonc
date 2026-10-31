@@ -21,14 +21,14 @@
   "kv_namespaces": [
     {
       "binding": "BRAINLIFT_MCP_OAUTH_KV",
-      "id": "6d84a93d36aa4bbba0f7162afb07d035"
+      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
     }
   ],
   "observability": {
     "enabled": true
   },
   "vars": {
-    "KEYSTONE_BASE_URL": "https://brainliftcentral.com"
+    "KEYSTONE_BASE_URL": "https://your-keystone-host.example.com"
   },
   "env": {
     "staging": {
@@ -50,11 +50,11 @@
       "kv_namespaces": [
         {
           "binding": "BRAINLIFT_MCP_OAUTH_KV",
-          "id": "632a048d510b4b68a6bcdb1581095c3c"
+          "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
         }
       ],
       "vars": {
-        "KEYSTONE_BASE_URL": "https://brainlift-platform.onrender.com"
+        "KEYSTONE_BASE_URL": "https://your-keystone-staging-host.example.com"
       }
     }
   },

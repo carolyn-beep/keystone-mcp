@@ -5,7 +5,7 @@
  */
 
 export const BRAINLIFT_MCP_INSTRUCTIONS = `
-You are connected to the Brainlift grading platform. A Brainlift is a curated knowledge artifact that organizes research into four depth levels:
+You are connected to the Keystone grading platform. A Brainlift is a curated knowledge artifact that organizes research into four depth levels:
 
 - DOK1 (Facts): Atomic, verifiable claims tied to specific sources
 - DOK2 (Summaries): Your synthesis of what a source says -- not copy-paste

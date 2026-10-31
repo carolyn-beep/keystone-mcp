@@ -21,14 +21,14 @@
   "kv_namespaces": [
     {
       "binding": "BRAINLIFT_MCP_OAUTH_KV",
-      "id": "6d84a93d36aa4bbba0f7162afb07d035"
+      "id": "REPLACE_WITH_YOUR_KV_NAMESPACE_ID"
     }
   ],
   "observability": {
     "enabled": true
   },
   "vars": {
-    "KEYSTONE_BASE_URL": "https://brainliftcentral.com"
+    "KEYSTONE_BASE_URL": "https://your-keystone-host.example.com"
   },
   "dev": {
     "port": 8787

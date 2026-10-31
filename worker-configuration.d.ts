@@ -8,7 +8,7 @@ declare namespace Cloudflare {
 	}
 	interface Env {
 		BRAINLIFT_MCP_OAUTH_KV: KVNamespace;
-		KEYSTONE_BASE_URL: "https://brainliftcentral.com";
+		KEYSTONE_BASE_URL: string;
 		MCP_OBJECT: DurableObjectNamespace<import("./src/index").BrainliftMCP>;
 	}
 }
