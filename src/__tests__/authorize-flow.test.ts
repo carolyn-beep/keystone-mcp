@@ -225,6 +225,54 @@ describe('redirect URI policy (A2)', () => {
   });
 });
 
+describe('PKCE (A6)', () => {
+  function errorOf(res: Response) {
+    expect(res.status).toBe(302);
+    return new URL(res.headers.get('Location')!).searchParams;
+  }
+
+  it('advertises S256 only', async () => {
+    const metadata = (await (await send('/.well-known/oauth-authorization-server')).json()) as {
+      code_challenge_methods_supported: string[];
+    };
+    expect(metadata.code_challenge_methods_supported).toEqual(['S256']);
+  });
+
+  it('refuses code_challenge_method=plain', async () => {
+    const clientId = await registerClient('https://app.example/cb');
+    const res = await send(authorizeQuery(clientId, 'https://app.example/cb', {
+      code_challenge: 'plain-verifier-value-that-is-long-enough-1234567',
+      code_challenge_method: 'plain',
+    }));
+    expect(errorOf(res).get('error')).toBe('invalid_request');
+  });
+
+  it('refuses a public client without PKCE', async () => {
+    const clientId = await registerClient('https://app.example/cb');
+    const res = await send(authorizeQuery(clientId, 'https://app.example/cb', {
+      code_challenge: null, code_challenge_method: null,
+    }));
+    expect(errorOf(res).get('error')).toBe('invalid_request');
+  });
+
+  it('refuses a confidential client without PKCE', async () => {
+    const reg = await register({
+      redirect_uris: ['https://app.example/cb'],
+      token_endpoint_auth_method: 'client_secret_basic',
+    });
+    expect(reg.status).toBe(201);
+    const { client_id: clientId } = (await reg.json()) as { client_id: string };
+
+    const res = await send(authorizeQuery(clientId, 'https://app.example/cb', {
+      code_challenge: null, code_challenge_method: null,
+    }));
+    const params = errorOf(res);
+    expect(params.get('error')).toBe('invalid_request');
+    expect(params.get('error_description')).toContain('S256');
+    expect(params.get('state')).toBe('client-state');
+  });
+});
+
 describe('POST /authorize no longer signs form-supplied requests (A5)', () => {
   it('rejects the old base64 `state` form field', async () => {
     const clientId = await registerClient('https://app.example/cb');

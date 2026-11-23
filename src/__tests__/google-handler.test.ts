@@ -23,6 +23,8 @@ const oauthReqInfo: AuthRequest = {
   redirectUri: REGISTERED_REDIRECT,
   scope: ['email'],
   state: 'client-state-xyz',
+  codeChallenge: 'E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM',
+  codeChallengeMethod: 'S256',
 };
 
 const mockFetch = vi.fn();

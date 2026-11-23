@@ -81,7 +81,7 @@ The MCP server is a thin orchestration layer. All grading logic lives in Keyston
 
 ## Auth flow
 
-1. AI agent connects to MCP server. Clients register themselves through dynamic client registration (`/register`); redirect URIs must be `https`, or `http` on a loopback host, and a loopback URI may change port between sign-ins (RFC 8252).
+1. AI agent connects to MCP server. Clients register themselves through dynamic client registration (`/register`); redirect URIs must be `https`, or `http` on a loopback host, and a loopback URI may change port between sign-ins (RFC 8252). Every authorization request must use PKCE with `S256`.
 2. MCP shows its own consent screen naming the client and the host its access will be sent to (with a warning when that is an app on the user's computer). The user chooses Allow or Deny. The screen sends anti-framing headers, and its form is single-use, expires after ten minutes and is bound to the browser that opened it. An approval is remembered in that browser for 30 days for the same client, redirect URI and scopes, so returning clients skip the screen.
 3. After Allow, MCP redirects to Google OAuth (scopes: `email profile`). The OAuth `state` is HMAC-signed and bound to a short-lived nonce cookie; on callback the signature, nonce, and the client's registered redirect URI are all re-validated before anything else happens.
 4. User signs in with Google. MCP requires a verified Google email (and, if `HOSTED_DOMAIN` is set, an email on that domain), then stores the Google profile (name, email) as user props, encrypted in KV by the OAuth provider. The Google access token is not retained.

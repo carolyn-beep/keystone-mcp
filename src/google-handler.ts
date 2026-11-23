@@ -9,6 +9,7 @@
 
 import {
   AuthorizationError,
+  authorizationErrorRedirect,
   type AuthRequest,
   type OAuthHelpers,
 } from '@cloudflare/workers-oauth-provider';
@@ -77,6 +78,19 @@ app.get('/authorize', async (c) => {
   } catch (error) {
     if (error instanceof AuthorizationError) return authorizationErrorResponse(error);
     throw error;
+  }
+
+  // MCP requires S256 PKCE from every client. The provider already refuses
+  // `plain` and requires PKCE from public clients; this extends the
+  // requirement to confidential clients too. The provider has validated the
+  // redirect URI at this point, so the error can go back to the client.
+  if (!authRequest.codeChallenge || authRequest.codeChallengeMethod !== 'S256') {
+    const location = authorizationErrorRedirect(
+      authRequest,
+      'invalid_request',
+      'PKCE with code_challenge_method=S256 is required',
+    );
+    return new Response(null, { status: 302, headers: { Location: location } });
   }
 
   if (await oauth.isConsentRemembered(c.req.raw, authRequest, rememberConsent(c.env))) {
