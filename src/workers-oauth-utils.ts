@@ -1,12 +1,12 @@
 /**
- * Cookie-based OAuth approval utilities.
+ * Signed OAuth state and nonce cookie for the Google leg of the flow.
  * Adapted from clado-mcp workers-oauth-utils.ts.
+ *
+ * Consent (and remembering it) is handled by workers-oauth-provider's
+ * consent helpers in google-handler.ts.
  */
 
 import type { AuthRequest } from '@cloudflare/workers-oauth-provider';
-
-const COOKIE_NAME = 'mcp-approved-clients';
-const ONE_YEAR_IN_SECONDS = 31536000;
 
 async function importKey(secret: string): Promise<CryptoKey> {
   if (!secret) {
@@ -53,124 +53,6 @@ async function verifySignature(
   } catch {
     return false;
   }
-}
-
-async function getApprovedClientsFromCookie(
-  cookieHeader: string | null,
-  secret: string,
-): Promise<string[] | null> {
-  if (!cookieHeader) return null;
-
-  const cookies = cookieHeader.split(';').map((c) => c.trim());
-  const targetCookie = cookies.find((c) => c.startsWith(`${COOKIE_NAME}=`));
-  if (!targetCookie) return null;
-
-  const cookieValue = targetCookie.substring(COOKIE_NAME.length + 1);
-  const parts = cookieValue.split('.');
-  if (parts.length !== 2) return null;
-
-  const [signatureHex, base64Payload] = parts;
-
-  try {
-    // atob() throws on malformed base64; treat that as "no valid cookie"
-    // rather than surfacing a 500 to the user.
-    const payload = atob(base64Payload);
-
-    const key = await importKey(secret);
-    const isValid = await verifySignature(key, signatureHex, payload);
-    if (!isValid) return null;
-
-    const approvedClients = JSON.parse(payload);
-    if (!Array.isArray(approvedClients)) return null;
-    if (!approvedClients.every((item) => typeof item === 'string')) return null;
-    return approvedClients as string[];
-  } catch {
-    return null;
-  }
-}
-
-export async function clientIdAlreadyApproved(
-  request: Request,
-  clientId: string,
-  cookieSecret: string,
-): Promise<boolean> {
-  if (!clientId) return false;
-  const cookieHeader = request.headers.get('Cookie');
-  const approvedClients = await getApprovedClientsFromCookie(
-    cookieHeader,
-    cookieSecret,
-  );
-  return approvedClients?.includes(clientId) ?? false;
-}
-
-export interface ParsedApprovalResult {
-  state: any;
-  headers: Record<string, string>;
-}
-
-export async function parseRedirectApproval(
-  request: Request,
-  cookieSecret: string,
-): Promise<ParsedApprovalResult> {
-  if (request.method !== 'POST') {
-    throw new Error('Invalid request method. Expected POST.');
-  }
-
-  const formData = await request.formData();
-  const encodedState = formData.get('state');
-  if (typeof encodedState !== 'string' || !encodedState) {
-    throw new Error("Missing or invalid 'state' in form data.");
-  }
-
-  const state = JSON.parse(atob(encodedState)) as {
-    oauthReqInfo?: AuthRequest;
-  };
-  const clientId = state?.oauthReqInfo?.clientId;
-  if (!clientId) {
-    throw new Error('Could not extract clientId from state object.');
-  }
-
-  const cookieHeader = request.headers.get('Cookie');
-  const existingApprovedClients =
-    (await getApprovedClientsFromCookie(cookieHeader, cookieSecret)) || [];
-  const updatedApprovedClients = Array.from(
-    new Set([...existingApprovedClients, clientId]),
-  );
-
-  const payload = JSON.stringify(updatedApprovedClients);
-  const key = await importKey(cookieSecret);
-  const signature = await signData(key, payload);
-  const newCookieValue = `${signature}.${btoa(payload)}`;
-
-  const headers: Record<string, string> = {
-    'Set-Cookie': `${COOKIE_NAME}=${newCookieValue}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=${ONE_YEAR_IN_SECONDS}`,
-  };
-
-  return { state, headers };
-}
-
-export async function autoApprove(
-  request: Request,
-  auth: AuthRequest,
-  cookieSecret: string,
-): Promise<ParsedApprovalResult> {
-  const cookieHeader = request.headers.get('Cookie');
-  const existingApprovedClients =
-    (await getApprovedClientsFromCookie(cookieHeader, cookieSecret)) || [];
-  const updatedApprovedClients = Array.from(
-    new Set([...existingApprovedClients, auth.clientId]),
-  );
-
-  const payload = JSON.stringify(updatedApprovedClients);
-  const key = await importKey(cookieSecret);
-  const signature = await signData(key, payload);
-  const newCookieValue = `${signature}.${btoa(payload)}`;
-
-  const headers: Record<string, string> = {
-    'Set-Cookie': `${COOKIE_NAME}=${newCookieValue}; HttpOnly; Secure; Path=/; SameSite=Lax; Max-Age=${ONE_YEAR_IN_SECONDS}`,
-  };
-
-  return { headers, state: { oauthReqInfo: auth } };
 }
 
 // ── Signed OAuth state ──

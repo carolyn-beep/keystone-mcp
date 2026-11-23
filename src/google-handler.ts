@@ -7,9 +7,10 @@
  * so every security check here covers both deployments.
  */
 
-import type {
-  AuthRequest,
-  OAuthHelpers,
+import {
+  AuthorizationError,
+  type AuthRequest,
+  type OAuthHelpers,
 } from '@cloudflare/workers-oauth-provider';
 import { Hono, type Context } from 'hono';
 import {
@@ -18,9 +19,6 @@ import {
   type Props,
 } from './utils.js';
 import {
-  clientIdAlreadyApproved,
-  parseRedirectApproval,
-  autoApprove,
   createSignedOAuthState,
   verifySignedOAuthState,
   generateOAuthNonce,
@@ -30,55 +28,112 @@ import {
 } from './workers-oauth-utils.js';
 import { requiredScopes } from './required-scopes.js';
 import { isRegisteredRedirectUri } from './redirect-uri.js';
+import { CONSENT_PAGE_CSP, renderConsentPage } from './consent-page.js';
 import type { Env } from './types/env.js';
 
 type HandlerEnv = Env & { OAUTH_PROVIDER: OAuthHelpers };
 
 const app = new Hono<{ Bindings: HandlerEnv }>();
 
+/**
+ * Approvals are remembered per browser, per client, redirect URI and scope,
+ * in a signed cookie managed by workers-oauth-provider. The user is not
+ * known until Google returns, so approvals are not tied to an account.
+ */
+function rememberConsent(env: HandlerEnv) {
+  return { secret: env.COOKIE_ENCRYPTION_KEY };
+}
+
+function plainTextError(message: string, status: 400): Response {
+  return new Response(message, {
+    status,
+    headers: { 'Content-Type': 'text/plain; charset=UTF-8' },
+  });
+}
+
+/**
+ * Report an invalid authorization request. Redirect back to the client only
+ * when the provider has validated the client and its redirect URI (it sets
+ * `redirectTo` in exactly that case); otherwise render the error here.
+ */
+function authorizationErrorResponse(error: AuthorizationError): Response {
+  if (error.redirectTo) {
+    return new Response(null, { status: 302, headers: { Location: error.redirectTo } });
+  }
+  return plainTextError(`Invalid authorization request: ${error.description}`, 400);
+}
+
+// GET /authorize: validate the request, then either continue to Google (the
+// user already approved this client in this browser) or show the consent
+// screen. Dynamic client registration is open, so without this screen any
+// registered client could obtain a token for a signed-in user in one click.
 app.get('/authorize', async (c) => {
-  const oauthReqInfo = await c.env.OAUTH_PROVIDER.parseAuthRequest(c.req.raw);
-  const { clientId } = oauthReqInfo;
-  if (!clientId) {
-    return c.text('Invalid request', 400);
+  const oauth = c.env.OAUTH_PROVIDER;
+
+  let authRequest: AuthRequest;
+  try {
+    authRequest = await oauth.parseAuthRequest(c.req.raw);
+  } catch (error) {
+    if (error instanceof AuthorizationError) return authorizationErrorResponse(error);
+    throw error;
   }
 
-  if (
-    await clientIdAlreadyApproved(
-      c.req.raw,
-      oauthReqInfo.clientId,
-      c.env.COOKIE_ENCRYPTION_KEY,
-    )
-  ) {
-    return redirectToGoogle(c, oauthReqInfo);
+  if (await oauth.isConsentRemembered(c.req.raw, authRequest, rememberConsent(c.env))) {
+    return redirectToGoogle(c, authRequest);
   }
 
-  // Auto-approve for MCP clients
-  const { state, headers } = await autoApprove(
-    c.req.raw,
-    oauthReqInfo,
-    c.env.COOKIE_ENCRYPTION_KEY,
-  );
-
-  return redirectToGoogle(c, state.oauthReqInfo, headers);
+  // describeConsent first: a failed lookup then leaves nothing in KV.
+  const details = await oauth.describeConsent(authRequest);
+  const consent = await oauth.beginConsent(authRequest);
+  // beginConsent's headers carry the browser-binding cookie, no-store and
+  // anti-framing headers; the page's own CSP is added alongside them.
+  consent.headers.set('Content-Type', 'text/html; charset=UTF-8');
+  consent.headers.append('Content-Security-Policy', CONSENT_PAGE_CSP);
+  return new Response(renderConsentPage(details, consent.handle), {
+    status: 200,
+    headers: consent.headers,
+  });
 });
 
+// POST /authorize: the consent form. The form carries only a single-use
+// handle; the authorization request itself comes back from server-side
+// storage, and the handle only works in the browser that holds its binding
+// cookie (SameSite=Lax, so cross-site posts arrive without it).
 app.post('/authorize', async (c) => {
-  const { state, headers } = await parseRedirectApproval(
-    c.req.raw,
-    c.env.COOKIE_ENCRYPTION_KEY,
-  );
-  if (!state.oauthReqInfo) {
-    return c.text('Invalid request', 400);
+  const oauth = c.env.OAUTH_PROVIDER;
+  const form = await c.req.raw.formData();
+  const handle = form.get('handle');
+  if (typeof handle !== 'string' || !handle) {
+    return plainTextError('Missing consent handle. Start the connection again from your MCP client.', 400);
   }
 
-  return redirectToGoogle(c, state.oauthReqInfo, headers);
+  try {
+    if (form.get('decision') !== 'approve') {
+      const denied = await oauth.denyConsent(c.req.raw, handle);
+      denied.headers.set('Location', denied.redirectTo);
+      return new Response(null, { status: 302, headers: denied.headers });
+    }
+
+    const approved = await oauth.approveConsent(c.req.raw, handle, {
+      remember: rememberConsent(c.env),
+    });
+    return redirectToGoogle(c, approved.request, approved.headers);
+  } catch (error) {
+    if (error instanceof AuthorizationError) {
+      return plainTextError(
+        'This approval page has expired, was already used, or was opened in another browser. '
+          + 'Start the connection again from your MCP client.',
+        400,
+      );
+    }
+    throw error;
+  }
 });
 
 async function redirectToGoogle(
   c: Context<{ Bindings: HandlerEnv }>,
   oauthReqInfo: AuthRequest,
-  extraHeaders: Record<string, string> = {},
+  headers: Headers = new Headers(),
 ) {
   // The nonce lives in both the signed state and an HttpOnly cookie. On
   // /callback the two must match, which binds the state to this browser.
@@ -97,10 +152,6 @@ async function redirectToGoogle(
     hostedDomain: c.env.HOSTED_DOMAIN,
   });
 
-  const headers = new Headers();
-  for (const [name, value] of Object.entries(extraHeaders)) {
-    headers.append(name, value);
-  }
   headers.append('Set-Cookie', oauthNonceCookieHeader(nonce));
   headers.set('Content-Type', 'text/html');
 

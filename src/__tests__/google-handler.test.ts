@@ -31,6 +31,9 @@ vi.stubGlobal('fetch', mockFetch);
 const lookupClient = vi.fn();
 const completeAuthorization = vi.fn();
 const parseAuthRequest = vi.fn();
+const isConsentRemembered = vi.fn();
+const describeConsent = vi.fn();
+const beginConsent = vi.fn();
 
 function makeEnv(overrides: Record<string, unknown> = {}) {
   return {
@@ -39,7 +42,10 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
     COOKIE_ENCRYPTION_KEY: SECRET,
     KEYSTONE_BASE_URL: 'https://keystone.example',
     KEYSTONE_SERVICE_KEY: 'svc',
-    OAUTH_PROVIDER: { lookupClient, completeAuthorization, parseAuthRequest },
+    OAUTH_PROVIDER: {
+      lookupClient, completeAuthorization, parseAuthRequest,
+      isConsentRemembered, describeConsent, beginConsent,
+    },
     ...overrides,
   };
 }
@@ -74,10 +80,39 @@ beforeEach(() => {
   lookupClient.mockResolvedValue({ clientId: 'client-abc', redirectUris: [REGISTERED_REDIRECT] });
   completeAuthorization.mockResolvedValue({ redirectTo: `${REGISTERED_REDIRECT}?code=issued` });
   parseAuthRequest.mockResolvedValue(oauthReqInfo);
+  isConsentRemembered.mockResolvedValue(true);
+  describeConsent.mockResolvedValue({
+    clientId: 'client-abc',
+    clientName: 'Test Client',
+    redirectUri: REGISTERED_REDIRECT,
+    redirectHost: 'localhost',
+    redirectIsLoopback: true,
+    scope: [],
+  });
+  beginConsent.mockResolvedValue({
+    handle: 'consent-handle',
+    headers: new Headers({ 'Set-Cookie': '__Host-oauth-consent-1=bind; Secure; HttpOnly', 'X-Frame-Options': 'DENY' }),
+  });
 });
 
 describe('GET /authorize', () => {
-  it('sets a nonce cookie and embeds a signed state carrying the same nonce', async () => {
+  it('shows the consent screen, not the Google redirect, for a client this browser has not approved', async () => {
+    isConsentRemembered.mockResolvedValueOnce(false);
+
+    const res = await GoogleHandler.request('/authorize?client_id=client-abc', {}, makeEnv());
+    const html = await res.text();
+
+    expect(res.status).toBe(200);
+    expect(html).toContain('Test Client');
+    expect(html).toContain('name="handle" value="consent-handle"');
+    expect(html).not.toContain('accounts.google.com');
+    expect(res.headers.get('X-Frame-Options')).toBe('DENY');
+    expect(res.headers.get('Content-Security-Policy')).toContain("default-src 'none'");
+    expect(res.headers.getSetCookie().some((c) => c.startsWith(`${OAUTH_NONCE_COOKIE_NAME}=`))).toBe(false);
+    expect(beginConsent).toHaveBeenCalledWith(oauthReqInfo);
+  });
+
+  it('sets a nonce cookie and embeds a signed state carrying the same nonce once consent is remembered', async () => {
     const res = await GoogleHandler.request(
       '/authorize?client_id=client-abc&redirect_uri=' + encodeURIComponent(REGISTERED_REDIRECT),
       {},
@@ -92,8 +127,6 @@ describe('GET /authorize', () => {
     expect(nonceCookie).toContain('Secure');
     expect(nonceCookie).toContain('SameSite=Lax');
     expect(nonceCookie).toContain('Max-Age=600');
-    // The approval cookie from autoApprove must survive alongside the nonce.
-    expect(setCookies.some((c) => c.startsWith('mcp-approved-clients='))).toBe(true);
 
     const nonce = nonceCookie!.split(';')[0].split('=')[1];
     const html = await res.text();
@@ -101,7 +134,8 @@ describe('GET /authorize', () => {
     expect(match).not.toBeNull();
     const googleUrl = new URL(match![1].replace(/&amp;/g, '&'));
 
-    // No refresh-token request; identity only.
+    // No refresh-token request; identity only. `prompt` stays unset: the
+    // per-client consent decision is our consent screen, not Google's.
     expect(googleUrl.searchParams.get('access_type')).toBeNull();
     expect(googleUrl.searchParams.get('prompt')).toBeNull();
     expect(googleUrl.searchParams.get('scope')).toBe('email profile');

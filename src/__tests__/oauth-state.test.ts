@@ -1,6 +1,5 @@
 /**
- * Tests for the signed OAuth state helpers and approval-cookie parsing in
- * workers-oauth-utils.ts.
+ * Tests for the signed OAuth state helpers in workers-oauth-utils.ts.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -12,7 +11,6 @@ import {
   readOAuthNonceCookie,
   oauthNonceCookieHeader,
   clearOAuthNonceCookieHeader,
-  clientIdAlreadyApproved,
   OAUTH_NONCE_COOKIE_NAME,
 } from '../workers-oauth-utils';
 
@@ -113,14 +111,5 @@ describe('nonce cookie helpers', () => {
     expect(readOAuthNonceCookie('other=1')).toBeNull();
     expect(readOAuthNonceCookie(null)).toBeNull();
     expect(readOAuthNonceCookie(`${OAUTH_NONCE_COOKIE_NAME}=`)).toBeNull();
-  });
-});
-
-describe('approval cookie parsing', () => {
-  it('returns false (not a throw) for a malformed base64 approval cookie', async () => {
-    const request = new Request('https://worker.example/authorize', {
-      headers: { Cookie: 'mcp-approved-clients=deadbeef.%%%not-base64%%%' },
-    });
-    await expect(clientIdAlreadyApproved(request, 'client-abc', SECRET)).resolves.toBe(false);
   });
 });
