@@ -132,7 +132,7 @@ describe('GET /authorize', () => {
     const html = await res.text();
     const match = html.match(/url=(https:\/\/accounts\.google\.com[^"]+)"/);
     expect(match).not.toBeNull();
-    const googleUrl = new URL(match![1].replace(/&amp;/g, '&'));
+    const googleUrl = new URL(match![1].replace(/&#38;/g, '&'));
 
     // No refresh-token request; identity only. `prompt` stays unset: the
     // per-client consent decision is our consent screen, not Google's.
@@ -229,6 +229,19 @@ describe('GET /callback: loopback redirect URIs', () => {
 
     expect(res.status).toBe(400);
     expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
+describe('GET /callback: redirect page', () => {
+  it('refuses to render a redirect to a non-http(s) URI', async () => {
+    mockGoogleSuccess({ id: 'g-123', name: 'Ada', email: 'ada@example.com', verified_email: true });
+    completeAuthorization.mockResolvedValueOnce({ redirectTo: 'javascript:alert(document.domain)' });
+    const state = await signedState('nonce-1');
+
+    const res = await callback({ state, code: 'auth-code' }, `${OAUTH_NONCE_COOKIE_NAME}=nonce-1`);
+
+    expect(res.status).toBe(400);
+    expect(await res.text()).not.toContain('javascript:');
   });
 });
 

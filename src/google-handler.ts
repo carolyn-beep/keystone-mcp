@@ -29,6 +29,7 @@ import {
 import { requiredScopes } from './required-scopes.js';
 import { isRegisteredRedirectUri } from './redirect-uri.js';
 import { CONSENT_PAGE_CSP, renderConsentPage } from './consent-page.js';
+import { renderRedirectPage } from './redirect-page.js';
 import type { Env } from './types/env.js';
 
 type HandlerEnv = Env & { OAUTH_PROVIDER: OAuthHelpers };
@@ -153,18 +154,11 @@ async function redirectToGoogle(
   });
 
   headers.append('Set-Cookie', oauthNonceCookieHeader(nonce));
-  headers.set('Content-Type', 'text/html');
+  headers.set('Content-Type', 'text/html; charset=UTF-8');
 
-  return new Response(
-    `<!DOCTYPE html>
-<html><head>
-<meta charset="UTF-8">
-<meta http-equiv="refresh" content="3;url=${googleAuthUrl}">
-<title>Redirecting to Google...</title>
-<script>setTimeout(() => { window.top.location.href = "${googleAuthUrl}"; }, 1500);</script>
-</head><body><p>Redirecting to Google login...</p></body></html>`,
-    { status: 200, headers },
-  );
+  // googleAuthUrl is always https://accounts.google.com/..., so this is non-null.
+  const page = renderRedirectPage(googleAuthUrl, 'Redirecting to Google...', 'Redirecting to Google login...');
+  return new Response(page, { status: 200, headers });
 }
 
 /**
@@ -304,22 +298,19 @@ app.get('/callback', async (c) => {
     props: propsToStore,
   });
 
-  return new Response(
-    `<!DOCTYPE html>
-<html><head>
-<meta charset="UTF-8">
-<meta http-equiv="refresh" content="3;url=${redirectTo}">
-<title>Authentication Successful</title>
-<script>setTimeout(() => { window.top.location.href = "${redirectTo}"; }, 1500);</script>
-</head><body><p>Authentication successful! Redirecting...</p></body></html>`,
-    {
-      status: 200,
-      headers: {
-        'Content-Type': 'text/html',
-        'Set-Cookie': clearOAuthNonceCookieHeader(),
-      },
+  // The provider only accepts https or loopback http redirect URIs, so a
+  // non-http(s) redirectTo means something upstream is wrong: refuse it.
+  const page = renderRedirectPage(redirectTo, 'Authentication Successful', 'Authentication successful! Redirecting...');
+  if (!page) {
+    return callbackError('Refusing to redirect to a non-http(s) URI', 400);
+  }
+  return new Response(page, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/html; charset=UTF-8',
+      'Set-Cookie': clearOAuthNonceCookieHeader(),
     },
-  );
+  });
 });
 
 export { app as GoogleHandler };

