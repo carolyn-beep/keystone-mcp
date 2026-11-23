@@ -853,20 +853,25 @@ const MAX_ERROR_DETAIL_LENGTH = 300;
  */
 export function keystoneErrorMessage(status: number, body: string): string {
   const prefix = `Keystone API error: ${status}`;
-  let detail: unknown;
+  let parsed: { error?: unknown; message?: unknown; retryAfter?: unknown };
   try {
-    const parsed = JSON.parse(body) as { error?: unknown; message?: unknown };
-    detail = parsed?.error ?? parsed?.message;
+    parsed = JSON.parse(body) ?? {};
   } catch {
     return prefix;
   }
-  if (typeof detail !== 'string' || !detail.trim()) return prefix;
+
+  // Keystone's rate limiter answers {"error": "...", "retryAfter": seconds};
+  // formatErrorGuidance reads the wait time from "retry-after: N".
+  const retryAfter = Number.isInteger(parsed.retryAfter) ? ` (retry-after: ${parsed.retryAfter})` : '';
+
+  const detail = parsed.error ?? parsed.message;
+  if (typeof detail !== 'string' || !detail.trim()) return `${prefix}${retryAfter}`;
 
   const trimmed = detail.trim();
   const shortened = trimmed.length > MAX_ERROR_DETAIL_LENGTH
     ? `${trimmed.slice(0, MAX_ERROR_DETAIL_LENGTH)}...`
     : trimmed;
-  return `${prefix} - ${shortened}`;
+  return `${prefix} - ${shortened}${retryAfter}`;
 }
 
 function toQueryParams(query: object): URLSearchParams {
