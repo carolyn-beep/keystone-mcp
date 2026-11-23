@@ -177,6 +177,27 @@ describe('GET /callback: state and nonce validation', () => {
   });
 });
 
+describe('GET /callback: loopback redirect URIs', () => {
+  it('accepts a registered loopback redirect URI on a different port without rewriting the registration', async () => {
+    mockGoogleSuccess({ id: 'g-123', name: 'Ada', email: 'ada@example.com', verified_email: true });
+    const state = await signedState('nonce-1', { ...oauthReqInfo, redirectUri: 'http://localhost:61000/callback' });
+
+    const res = await callback({ state, code: 'auth-code' }, `${OAUTH_NONCE_COOKIE_NAME}=nonce-1`);
+
+    expect(res.status).toBe(200);
+    expect(completeAuthorization).toHaveBeenCalledTimes(1);
+  });
+
+  it('rejects a loopback redirect URI whose path differs from the registered one', async () => {
+    const state = await signedState('nonce-1', { ...oauthReqInfo, redirectUri: 'http://localhost:61000/elsewhere' });
+
+    const res = await callback({ state, code: 'auth-code' }, `${OAUTH_NONCE_COOKIE_NAME}=nonce-1`);
+
+    expect(res.status).toBe(400);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+});
+
 describe('GET /callback: ?error= path', () => {
   it('redirects a Google error back to the validated client redirect URI', async () => {
     const state = await signedState('nonce-1');

@@ -114,45 +114,6 @@ class OAuthKVAdapter {
   }
 }
 
-async function syncLocalhostRedirectUri(request: Request, env: StudentEnv): Promise<void> {
-  const url = new URL(request.url);
-  if (url.pathname !== '/authorize') return;
-
-  const clientId = url.searchParams.get('client_id');
-  const redirectUri = url.searchParams.get('redirect_uri');
-  if (!clientId || !redirectUri) return;
-
-  let parsed: URL;
-  try {
-    parsed = new URL(redirectUri);
-  } catch {
-    return;
-  }
-  if (parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1') return;
-
-  const kv = env.BRAINLIFT_MCP_OAUTH_KV;
-  const stored = await kv.get(`client:${clientId}`);
-  if (!stored) return;
-
-  const clientInfo = JSON.parse(stored);
-  const currentUris: string[] = clientInfo.redirectUris || [];
-  if (currentUris.includes(redirectUri)) return;
-
-  clientInfo.redirectUris = [
-    ...currentUris.filter((uri: string) => {
-      try {
-        const parsedUri = new URL(uri);
-        return parsedUri.hostname !== 'localhost' && parsedUri.hostname !== '127.0.0.1';
-      } catch {
-        return true;
-      }
-    }),
-    redirectUri,
-  ];
-
-  await kv.put(`client:${clientId}`, JSON.stringify(clientInfo));
-}
-
 const sseHandler = BrainliftStudentMCP.serveSSE('/sse');
 const streamableHandler = BrainliftStudentMCP.serve('/sse');
 const mcpHandler = {
@@ -185,7 +146,6 @@ export default {
     }
 
     const adaptedEnv = Object.assign(new OAuthKVAdapter(env), env);
-    await syncLocalhostRedirectUri(request, env);
 
     const provider = new OAuthProvider({
       apiHandler: mcpHandler as any,

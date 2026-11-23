@@ -29,6 +29,7 @@ import {
   readOAuthNonceCookie,
 } from './workers-oauth-utils.js';
 import { requiredScopes } from './required-scopes.js';
+import { isRegisteredRedirectUri } from './redirect-uri.js';
 import type { Env } from './types/env.js';
 
 type HandlerEnv = Env & { OAUTH_PROVIDER: OAuthHelpers };
@@ -163,10 +164,11 @@ app.get('/callback', async (c) => {
   }
 
   // 3. The client must still exist and the redirect URI must be one it
-  //    registered. This also protects the ?error= early return below from
-  //    being used as an open redirect.
+  //    registered (loopback URIs may differ in port, RFC 8252 §7.3). This
+  //    also protects the ?error= early return below from being used as an
+  //    open redirect.
   const clientInfo = await c.env.OAUTH_PROVIDER.lookupClient(oauthReqInfo.clientId);
-  if (!clientInfo || !clientInfo.redirectUris.includes(oauthReqInfo.redirectUri)) {
+  if (!clientInfo || !isRegisteredRedirectUri(oauthReqInfo.redirectUri, clientInfo.redirectUris)) {
     return callbackError('Unknown client or unregistered redirect URI', 400);
   }
 
