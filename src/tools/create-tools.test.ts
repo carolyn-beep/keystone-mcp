@@ -14,13 +14,15 @@ const mockCreateDok3 = vi.fn();
 const mockCreateDok4 = vi.fn();
 
 vi.mock('../utils/keystone-client', () => ({
-  KeystoneClient: vi.fn().mockImplementation(() => ({
-    withUser: vi.fn().mockReturnThis(),
-    createDok1: mockCreateDok1,
-    createDok2: mockCreateDok2,
-    createDok3: mockCreateDok3,
-    createDok4: mockCreateDok4,
-  })),
+  KeystoneClient: vi.fn().mockImplementation(function () {
+    return {
+      withUser: vi.fn().mockReturnThis(),
+      createDok1: mockCreateDok1,
+      createDok2: mockCreateDok2,
+      createDok3: mockCreateDok3,
+      createDok4: mockCreateDok4,
+    };
+  }),
 }));
 
 const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };

@@ -16,16 +16,17 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@cloudflare/workers-oauth-provider": "^0.0.5",
-    "@modelcontextprotocol/sdk": "1.13.1",
-    "agents": "^0.0.100",
-    "hono": "^4.6.3",
-    "zod": "^3.25.67"
+    "@cloudflare/workers-oauth-provider": "^1.2.4",
+    "@modelcontextprotocol/sdk": "1.32.2",
+    "@modelcontextprotocol/server": "2.4.0",
+    "agents": "^0.34.0",
+    "hono": "^4.13.20",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@types/node": "^24.1.0",
     "typescript": "^5.8.3",
-    "vitest": "^3.2.1",
-    "wrangler": "^4.26.0"
+    "vitest": "^4.1.12",
+    "wrangler": "^4.166.0"
   }
 }

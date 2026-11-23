@@ -18,17 +18,19 @@ const mockUpdateDeliverable = vi.fn();
 const mockListDeliverables = vi.fn();
 
 vi.mock('../utils/keystone-client', () => ({
-  KeystoneClient: vi.fn().mockImplementation(() => ({
-    withUser: vi.fn().mockReturnThis(),
-    generatePlan: mockGeneratePlan,
-    getPlan: mockGetPlan,
-    listTasks: mockListTasks,
-    getTask: mockGetTask,
-    saveDeliverable: mockSaveDeliverable,
-    readDeliverable: mockReadDeliverable,
-    updateDeliverable: mockUpdateDeliverable,
-    listDeliverables: mockListDeliverables,
-  })),
+  KeystoneClient: vi.fn().mockImplementation(function () {
+    return {
+      withUser: vi.fn().mockReturnThis(),
+      generatePlan: mockGeneratePlan,
+      getPlan: mockGetPlan,
+      listTasks: mockListTasks,
+      getTask: mockGetTask,
+      saveDeliverable: mockSaveDeliverable,
+      readDeliverable: mockReadDeliverable,
+      updateDeliverable: mockUpdateDeliverable,
+      listDeliverables: mockListDeliverables,
+    };
+  }),
 }));
 
 const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };

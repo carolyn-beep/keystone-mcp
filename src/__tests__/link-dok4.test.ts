@@ -8,10 +8,12 @@ const mockLinkDok4 = vi.fn();
 const mockWithUser = vi.fn().mockReturnThis();
 
 vi.mock('../utils/keystone-client', () => ({
-  KeystoneClient: vi.fn().mockImplementation(() => ({
-    withUser: mockWithUser,
-    linkDok4: mockLinkDok4,
-  })),
+  KeystoneClient: vi.fn().mockImplementation(function () {
+    return {
+      withUser: mockWithUser,
+      linkDok4: mockLinkDok4,
+    };
+  }),
 }));
 
 vi.mock('../utils/formatters', () => ({

@@ -12,11 +12,13 @@ const mockGetAssessment = vi.fn();
 const mockWithUser = vi.fn().mockReturnThis();
 
 vi.mock('../utils/keystone-client', () => ({
-  KeystoneClient: vi.fn().mockImplementation(() => ({
-    withUser: mockWithUser,
-    getStatus: mockGetStatus,
-    getAssessment: mockGetAssessment,
-  })),
+  KeystoneClient: vi.fn().mockImplementation(function () {
+    return {
+      withUser: mockWithUser,
+      getStatus: mockGetStatus,
+      getAssessment: mockGetAssessment,
+    };
+  }),
 }));
 
 vi.mock('../utils/formatters', () => ({

@@ -11,10 +11,12 @@ const mockListBrainlifts = vi.fn();
 const mockWithUser = vi.fn().mockReturnThis();
 
 vi.mock('../utils/keystone-client', () => ({
-  KeystoneClient: vi.fn().mockImplementation(() => ({
-    withUser: mockWithUser,
-    listBrainlifts: mockListBrainlifts,
-  })),
+  KeystoneClient: vi.fn().mockImplementation(function () {
+    return {
+      withUser: mockWithUser,
+      listBrainlifts: mockListBrainlifts,
+    };
+  }),
 }));
 
 vi.mock('../utils/formatters', () => ({

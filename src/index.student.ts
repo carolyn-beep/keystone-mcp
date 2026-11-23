@@ -40,7 +40,7 @@ const STUDENT_MCP_INSTRUCTIONS = `${BRAINLIFT_MCP_INSTRUCTIONS}\n\n${STUDENT_SPR
 
 interface StudentEnv {
   BRAINLIFT_MCP_OAUTH_KV: KVNamespace;
-  MCP_OBJECT: DurableObjectNamespace;
+  MCP_OBJECT: DurableObjectNamespace<BrainliftStudentMCP>;
   KEYSTONE_BASE_URL: string;
   KEYSTONE_SERVICE_KEY: string;
   GOOGLE_CLIENT_ID: string;
@@ -62,35 +62,43 @@ export class BrainliftStudentMCP extends McpAgent<
   server = new McpServer({
     name: 'Keystone Student MCP',
     version: '0.1.0',
+  }, {
     instructions: STUDENT_MCP_INSTRUCTIONS,
   });
 
   async init(): Promise<void> {
-    registerGetTemplate(this.server, this.env, this.props);
-    registerGradeBrainlift(this.server, this.env, this.props);
-    registerListBrainlifts(this.server, this.env, this.props);
-    registerGetBrainliftAssessment(this.server, this.env, this.props);
-    registerEditDokItem(this.server, this.env, this.props);
-    registerDeleteDokItem(this.server, this.env, this.props);
-    registerCreateDok1(this.server, this.env, this.props);
-    registerCreateDok2(this.server, this.env, this.props);
-    registerCreateDok3(this.server, this.env, this.props);
-    registerCreateDok4(this.server, this.env, this.props);
-    registerListExperts(this.server, this.env, this.props);
-    registerCreateExpert(this.server, this.env, this.props);
-    registerDeleteExpert(this.server, this.env, this.props);
-    registerGetStaleItems(this.server, this.env, this.props);
-    registerDismissStale(this.server, this.env, this.props);
-    registerLinkDok3(this.server, this.env, this.props);
-    registerLinkDok4(this.server, this.env, this.props);
-    registerGeneratePlan(this.server, this.env, this.props);
-    registerGetPlan(this.server, this.env, this.props);
-    registerListTasks(this.server, this.env, this.props);
-    registerGetTask(this.server, this.env, this.props);
-    registerSaveDeliverable(this.server, this.env, this.props);
-    registerReadDeliverable(this.server, this.env, this.props);
-    registerUpdateDeliverable(this.server, this.env, this.props);
-    registerListDeliverables(this.server, this.env, this.props);
+    // The OAuth provider always supplies props for an authenticated session;
+    // refuse to register tools without an identity rather than act as nobody.
+    const props = this.props;
+    if (!props) {
+      throw new Error('MCP session started without an authenticated user');
+    }
+
+    registerGetTemplate(this.server, this.env, props);
+    registerGradeBrainlift(this.server, this.env, props);
+    registerListBrainlifts(this.server, this.env, props);
+    registerGetBrainliftAssessment(this.server, this.env, props);
+    registerEditDokItem(this.server, this.env, props);
+    registerDeleteDokItem(this.server, this.env, props);
+    registerCreateDok1(this.server, this.env, props);
+    registerCreateDok2(this.server, this.env, props);
+    registerCreateDok3(this.server, this.env, props);
+    registerCreateDok4(this.server, this.env, props);
+    registerListExperts(this.server, this.env, props);
+    registerCreateExpert(this.server, this.env, props);
+    registerDeleteExpert(this.server, this.env, props);
+    registerGetStaleItems(this.server, this.env, props);
+    registerDismissStale(this.server, this.env, props);
+    registerLinkDok3(this.server, this.env, props);
+    registerLinkDok4(this.server, this.env, props);
+    registerGeneratePlan(this.server, this.env, props);
+    registerGetPlan(this.server, this.env, props);
+    registerListTasks(this.server, this.env, props);
+    registerGetTask(this.server, this.env, props);
+    registerSaveDeliverable(this.server, this.env, props);
+    registerReadDeliverable(this.server, this.env, props);
+    registerUpdateDeliverable(this.server, this.env, props);
+    registerListDeliverables(this.server, this.env, props);
   }
 }
 
@@ -186,6 +194,10 @@ export default {
       clientRegistrationEndpoint: '/register',
       defaultHandler: GoogleHandler as any,
       tokenEndpoint: '/token',
+      // Tokens are bound to this resource (RFC 8707). The bare origin covers
+      // /sse and /sse/message; grants issued by workers-oauth-provider 0.0.x
+      // carry no resource and bind to it on their next refresh.
+      resourceMetadata: { resource: url.origin },
       accessTokenTTL: 24 * 60 * 60,
     });
 

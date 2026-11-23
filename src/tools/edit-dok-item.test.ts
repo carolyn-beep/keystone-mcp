@@ -8,10 +8,12 @@ import { handleEditDokItem } from './edit-dok-item';
 const mockEditDokItem = vi.fn();
 
 vi.mock('../utils/keystone-client', () => ({
-  KeystoneClient: vi.fn().mockImplementation(() => ({
-    withUser: vi.fn().mockReturnThis(),
-    editDokItem: mockEditDokItem,
-  })),
+  KeystoneClient: vi.fn().mockImplementation(function () {
+    return {
+      withUser: vi.fn().mockReturnThis(),
+      editDokItem: mockEditDokItem,
+    };
+  }),
 }));
 
 const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };

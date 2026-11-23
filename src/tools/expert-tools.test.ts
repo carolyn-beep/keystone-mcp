@@ -12,12 +12,14 @@ const mockCreateExperts = vi.fn();
 const mockDeleteExpert = vi.fn();
 
 vi.mock('../utils/keystone-client', () => ({
-  KeystoneClient: vi.fn().mockImplementation(() => ({
-    withUser: vi.fn().mockReturnThis(),
-    listExperts: mockListExperts,
-    createExperts: mockCreateExperts,
-    deleteExpert: mockDeleteExpert,
-  })),
+  KeystoneClient: vi.fn().mockImplementation(function () {
+    return {
+      withUser: vi.fn().mockReturnThis(),
+      listExperts: mockListExperts,
+      createExperts: mockCreateExperts,
+      deleteExpert: mockDeleteExpert,
+    };
+  }),
 }));
 
 const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };

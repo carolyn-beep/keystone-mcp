@@ -12,10 +12,12 @@ const mockGetTemplate = vi.fn();
 const mockWithUser = vi.fn().mockReturnThis();
 
 vi.mock('../utils/keystone-client', () => ({
-  KeystoneClient: vi.fn().mockImplementation(() => ({
-    withUser: mockWithUser,
-    getTemplate: mockGetTemplate,
-  })),
+  KeystoneClient: vi.fn().mockImplementation(function () {
+    return {
+      withUser: mockWithUser,
+      getTemplate: mockGetTemplate,
+    };
+  }),
 }));
 
 import { KeystoneClient } from '../utils/keystone-client';

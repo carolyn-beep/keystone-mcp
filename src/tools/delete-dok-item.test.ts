@@ -8,10 +8,12 @@ import { handleDeleteDokItem } from './delete-dok-item';
 const mockDeleteDokItem = vi.fn();
 
 vi.mock('../utils/keystone-client', () => ({
-  KeystoneClient: vi.fn().mockImplementation(() => ({
-    withUser: vi.fn().mockReturnThis(),
-    deleteDokItem: mockDeleteDokItem,
-  })),
+  KeystoneClient: vi.fn().mockImplementation(function () {
+    return {
+      withUser: vi.fn().mockReturnThis(),
+      deleteDokItem: mockDeleteDokItem,
+    };
+  }),
 }));
 
 const env = { KEYSTONE_BASE_URL: 'https://api.test.com', KEYSTONE_SERVICE_KEY: 'key' };

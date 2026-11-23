@@ -21,9 +21,9 @@ describe('expert tool wiring', () => {
     expect(source).toContain("import { registerListExperts } from './tools/list-experts';");
     expect(source).toContain("import { registerCreateExpert } from './tools/create-expert';");
     expect(source).toContain("import { registerDeleteExpert } from './tools/delete-expert';");
-    expect(source).toContain('registerListExperts(this.server, this.env, this.props);');
-    expect(source).toContain('registerCreateExpert(this.server, this.env, this.props);');
-    expect(source).toContain('registerDeleteExpert(this.server, this.env, this.props);');
+    expect(source).toContain('registerListExperts(this.server, this.env, props);');
+    expect(source).toContain('registerCreateExpert(this.server, this.env, props);');
+    expect(source).toContain('registerDeleteExpert(this.server, this.env, props);');
   });
 
   it('registers expert tools in the student MCP entrypoint and keeps shared instructions', () => {
@@ -32,9 +32,9 @@ describe('expert tool wiring', () => {
     expect(source).toContain("import { registerListExperts } from './tools/list-experts';");
     expect(source).toContain("import { registerCreateExpert } from './tools/create-expert';");
     expect(source).toContain("import { registerDeleteExpert } from './tools/delete-expert';");
-    expect(source).toContain('registerListExperts(this.server, this.env, this.props);');
-    expect(source).toContain('registerCreateExpert(this.server, this.env, this.props);');
-    expect(source).toContain('registerDeleteExpert(this.server, this.env, this.props);');
+    expect(source).toContain('registerListExperts(this.server, this.env, props);');
+    expect(source).toContain('registerCreateExpert(this.server, this.env, props);');
+    expect(source).toContain('registerDeleteExpert(this.server, this.env, props);');
     expect(source).toContain('const STUDENT_MCP_INSTRUCTIONS = `${BRAINLIFT_MCP_INSTRUCTIONS}\\n\\n${STUDENT_SPRINT_APPENDIX}`;');
   });
 });

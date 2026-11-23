@@ -34,27 +34,35 @@ export class BrainliftMCP extends McpAgent<Env, Record<string, never>, Props> {
   server = new McpServer({
     name: 'Keystone MCP',
     version: '0.1.0',
+  }, {
     instructions: BRAINLIFT_MCP_INSTRUCTIONS,
   });
 
   async init(): Promise<void> {
-    registerGetTemplate(this.server, this.env, this.props);
-    registerGradeBrainlift(this.server, this.env, this.props);
-    registerListBrainlifts(this.server, this.env, this.props);
-    registerGetBrainliftAssessment(this.server, this.env, this.props);
-    registerEditDokItem(this.server, this.env, this.props);
-    registerDeleteDokItem(this.server, this.env, this.props);
-    registerCreateDok1(this.server, this.env, this.props);
-    registerCreateDok2(this.server, this.env, this.props);
-    registerCreateDok3(this.server, this.env, this.props);
-    registerCreateDok4(this.server, this.env, this.props);
-    registerListExperts(this.server, this.env, this.props);
-    registerCreateExpert(this.server, this.env, this.props);
-    registerDeleteExpert(this.server, this.env, this.props);
-    registerGetStaleItems(this.server, this.env, this.props);
-    registerDismissStale(this.server, this.env, this.props);
-    registerLinkDok3(this.server, this.env, this.props);
-    registerLinkDok4(this.server, this.env, this.props);
+    // The OAuth provider always supplies props for an authenticated session;
+    // refuse to register tools without an identity rather than act as nobody.
+    const props = this.props;
+    if (!props) {
+      throw new Error('MCP session started without an authenticated user');
+    }
+
+    registerGetTemplate(this.server, this.env, props);
+    registerGradeBrainlift(this.server, this.env, props);
+    registerListBrainlifts(this.server, this.env, props);
+    registerGetBrainliftAssessment(this.server, this.env, props);
+    registerEditDokItem(this.server, this.env, props);
+    registerDeleteDokItem(this.server, this.env, props);
+    registerCreateDok1(this.server, this.env, props);
+    registerCreateDok2(this.server, this.env, props);
+    registerCreateDok3(this.server, this.env, props);
+    registerCreateDok4(this.server, this.env, props);
+    registerListExperts(this.server, this.env, props);
+    registerCreateExpert(this.server, this.env, props);
+    registerDeleteExpert(this.server, this.env, props);
+    registerGetStaleItems(this.server, this.env, props);
+    registerDismissStale(this.server, this.env, props);
+    registerLinkDok3(this.server, this.env, props);
+    registerLinkDok4(this.server, this.env, props);
   }
 }
 
@@ -162,6 +170,10 @@ export default {
       clientRegistrationEndpoint: '/register',
       defaultHandler: GoogleHandler as any,
       tokenEndpoint: '/token',
+      // Tokens are bound to this resource (RFC 8707). The bare origin covers
+      // /sse and /sse/message; grants issued by workers-oauth-provider 0.0.x
+      // carry no resource and bind to it on their next refresh.
+      resourceMetadata: { resource: url.origin },
       // 24h access tokens (default is 1h). Reduces how often clients hit the
       // refresh path -- some MCP clients (e.g. OpenClaw via mcporter) have
       // bugs persisting rotated refresh tokens, which forced users into a
