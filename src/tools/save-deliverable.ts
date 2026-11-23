@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { slugSchema } from '../utils/schemas';
+import { slugSchema, MAX_MARKDOWN_LENGTH, MAX_ITEM_TEXT_LENGTH } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatSavedDeliverable, formatErrorGuidance } from '../utils/formatters';
@@ -78,8 +78,8 @@ export function registerSaveDeliverable(server: McpServer, env: ToolEnv, props: 
     {
       brainliftSlug: slugSchema.describe('Brainlift slug'),
       taskId: z.number().int().positive().describe('Task ID'),
-      title: z.string().min(1).describe('Deliverable title'),
-      markdown: z.string().describe('Deliverable markdown content, CO-CREATED WITH THE STUDENT. This cannot be an AI-only draft. The student must have contributed their own opinions, decisions, wording, and voice. Submissions that are clearly one-shot AI output will be refused.'),
+      title: z.string().min(1).max(MAX_ITEM_TEXT_LENGTH).describe('Deliverable title'),
+      markdown: z.string().max(MAX_MARKDOWN_LENGTH).describe('Deliverable markdown content, CO-CREATED WITH THE STUDENT. This cannot be an AI-only draft. The student must have contributed their own opinions, decisions, wording, and voice. Submissions that are clearly one-shot AI output will be refused.'),
     },
     async (args) => handleSaveDeliverable(args, env, props),
   );

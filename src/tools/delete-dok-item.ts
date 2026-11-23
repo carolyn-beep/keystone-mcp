@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { slugSchema } from '../utils/schemas';
+import { slugSchema, dokLevelSchema, idSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import type { DeletePreviewResponse, DeleteResultResponse } from '../utils/keystone-client';
@@ -87,8 +87,8 @@ Common workflows:
 First call (confirm=false) returns an impact preview showing what will be affected. Review the cascade, then call again with confirm=true to execute.`,
     {
       slug: slugSchema.describe('Brainlift slug'),
-      dok: z.number().min(1).max(4).describe('DOK level: 1=Facts, 2=Summaries, 3=Insights, 4=SPOVs'),
-      itemId: z.number().describe('Item ID (from get_brainlift_assessment output)'),
+      dok: dokLevelSchema.describe('DOK level: 1=Facts, 2=Summaries, 3=Insights, 4=SPOVs'),
+      itemId: idSchema.describe('Item ID (from get_brainlift_assessment output)'),
       confirm: z.boolean().default(false).describe('false = preview impact only (safe). true = execute deletion (irreversible).'),
     },
     async (args) => handleDeleteDokItem(args, env, props),

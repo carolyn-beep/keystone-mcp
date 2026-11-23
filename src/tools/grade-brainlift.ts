@@ -6,6 +6,7 @@
  */
 
 import { z } from 'zod';
+import { MAX_MARKDOWN_LENGTH, MAX_ITEM_TEXT_LENGTH } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatGradeResponse, formatErrorGuidance } from '../utils/formatters';
@@ -85,10 +86,10 @@ export function registerGradeBrainlift(
     'grade_brainlift',
     'Create a new Brainlift by submitting its full markdown for grading. This is the primary way to create brainlifts -- no separate "create" tool exists. Returns a slug to track progress. Call get_template FIRST to see the required format -- structural mistakes silently drop content.',
     {
-      markdown: z.string().describe(
+      markdown: z.string().max(MAX_MARKDOWN_LENGTH).describe(
         'Complete Brainlift in markdown format. Use get_template first to see the required format.',
       ),
-      title: z.string().optional().describe(
+      title: z.string().max(MAX_ITEM_TEXT_LENGTH).optional().describe(
         'Optional title override. If omitted, extracted from the # heading in the markdown.',
       ),
     },

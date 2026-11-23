@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { slugSchema } from '../utils/schemas';
+import { slugSchema, MAX_MARKDOWN_LENGTH } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatUpdatedDeliverable, formatErrorGuidance } from '../utils/formatters';
@@ -77,7 +77,7 @@ export function registerUpdateDeliverable(server: McpServer, env: ToolEnv, props
     {
       brainliftSlug: slugSchema.describe('Brainlift slug'),
       taskId: z.number().int().positive().describe('Task ID'),
-      markdown: z.string().describe('Updated markdown body, CO-CREATED WITH THE STUDENT and built on top of the existing document. This cannot be an AI-only rewrite — the student must have directed the changes, their wording must survive wherever they were happy with it, and their voice must remain in the document. Submissions that are clearly one-shot AI rewrites will be refused.'),
+      markdown: z.string().max(MAX_MARKDOWN_LENGTH).describe('Updated markdown body, CO-CREATED WITH THE STUDENT and built on top of the existing document. This cannot be an AI-only rewrite — the student must have directed the changes, their wording must survive wherever they were happy with it, and their voice must remain in the document. Submissions that are clearly one-shot AI rewrites will be refused.'),
     },
     async (args) => handleUpdateDeliverable(args, env, props),
   );

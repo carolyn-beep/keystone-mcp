@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { slugSchema } from '../utils/schemas';
+import { slugSchema, isoDateSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient, type GeneratePlanInput } from '../utils/keystone-client';
 import { formatGeneratedPlan, formatErrorGuidance } from '../utils/formatters';
@@ -94,7 +94,7 @@ export function registerGeneratePlan(server: McpServer, env: ToolEnv, props: Too
     GENERATE_PLAN_DESCRIPTION,
     {
       brainliftSlug: slugSchema.describe('Brainlift slug'),
-      localDate: z.string().describe("Student's local date in YYYY-MM-DD format. The backend uses this to schedule task dates."),
+      localDate: isoDateSchema.describe("Student's local date in YYYY-MM-DD format. The backend uses this to schedule task dates."),
       diagnosis: z.object({
         goalRaw: z.string().min(1).max(2000).describe(
           "The student's business ambition in their own words. Preserve their vagueness; do not polish or restate in your voice. If the brainlift states a goal clearly, use it; otherwise ask the student for their ambition directly.",

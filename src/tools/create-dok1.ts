@@ -5,7 +5,7 @@
  */
 
 import { z } from 'zod';
-import { slugSchema } from '../utils/schemas';
+import { slugSchema, MAX_ITEM_TEXT_LENGTH, MAX_URL_LENGTH } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatCreateResponse, formatErrorGuidance } from '../utils/formatters';
@@ -66,9 +66,9 @@ export function registerCreateDok1(server: McpServer, env: ToolEnv, props: ToolP
     'Add a new DOK1 fact to an existing brainlift. Review quality guidelines from get_template first. Sharp, well-sourced facts beat vague ones -- volume dilutes, it does not strengthen. Triggers async verification grading. Poll get_brainlift_assessment to check when grading completes (item shows [REGRADING] until done).',
     {
       slug: slugSchema.describe('Brainlift slug'),
-      fact: z.string().describe('An atomic, verifiable factual claim tied to the source'),
-      source: z.string().describe('A real, reachable source URL (e.g., https://example.com/article). Must be a valid URL the grader can fetch -- hallucinated URLs will fail verification.'),
-      category: z.string().optional().describe('Topic category'),
+      fact: z.string().min(1).max(MAX_ITEM_TEXT_LENGTH).describe('An atomic, verifiable factual claim tied to the source'),
+      source: z.string().min(1).max(MAX_URL_LENGTH).describe('A real, reachable source URL (e.g., https://example.com/article). Must be a valid URL the grader can fetch -- hallucinated URLs will fail verification.'),
+      category: z.string().max(MAX_ITEM_TEXT_LENGTH).optional().describe('Topic category'),
     },
     async (args) => handleCreateDok1(args, env, props),
   );

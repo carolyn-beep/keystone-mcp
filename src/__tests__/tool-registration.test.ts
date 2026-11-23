@@ -85,4 +85,21 @@ describe('tool registration through the MCP SDK', () => {
     const text = (result.content as Array<{ text: string }>)[0].text;
     expect(text).toMatch(/invalid/i);
   });
+
+  it('rejects fractional DOK levels and item IDs before they reach an upstream URL path', async () => {
+    const result = await client.callTool({
+      name: 'delete_dok_item',
+      arguments: { slug: 'my-brainlift', dok: 2.5, itemId: 1.5, confirm: false },
+    });
+    expect(result.isError).toBe(true);
+  });
+
+  it('rejects oversized markdown', async () => {
+    const result = await client.callTool({
+      name: 'grade_brainlift',
+      arguments: { markdown: 'x'.repeat(500_001) },
+    });
+    expect(result.isError).toBe(true);
+    expect((result.content as Array<{ text: string }>)[0].text).toMatch(/invalid|too big|500000/i);
+  });
 });

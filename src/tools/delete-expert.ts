@@ -4,8 +4,7 @@
  * Deletes one imported expert from an existing brainlift.
  */
 
-import { z } from 'zod';
-import { slugSchema } from '../utils/schemas';
+import { slugSchema, idSchema } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatDeletedExpert, formatErrorGuidance } from '../utils/formatters';
@@ -62,7 +61,7 @@ export function registerDeleteExpert(server: McpServer, env: ToolEnv, props: Too
     'Delete one expert from an existing brainlift. Ranking refresh runs asynchronously after deletion.',
     {
       slug: slugSchema.describe('Brainlift slug'),
-      expertId: z.number().describe('Expert ID from list_experts'),
+      expertId: idSchema.describe('Expert ID from list_experts'),
     },
     async (args) => handleDeleteExpert(args, env, props),
   );

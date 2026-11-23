@@ -6,7 +6,7 @@
  */
 
 import { z } from 'zod';
-import { slugSchema } from '../utils/schemas';
+import { slugSchema, idSchema, MAX_ITEM_TEXT_LENGTH, MAX_IDS_PER_CALL } from '../utils/schemas';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { KeystoneClient } from '../utils/keystone-client';
 import { formatCreateResponse, formatErrorGuidance } from '../utils/formatters';
@@ -67,9 +67,9 @@ export function registerCreateDok4(server: McpServer, env: ToolEnv, props: ToolP
     "Add a new DOK4 SPOV (Spiky Point of View) to an existing brainlift. A SPOV is a single punchy line that takes a side; observations and hedged takes get rejected. Review quality guidelines from get_template first. Linked DOK3 insights must be in 'graded' status. Triggers async grading; poll get_brainlift_assessment to check completion.",
     {
       slug: slugSchema.describe('Brainlift slug'),
-      text: z.string().describe('A single punchy, quotable line that takes a side. Not a paragraph, not a hedged take. The DOK1-2-3 chain is the justification; the SPOV itself does not explain itself.'),
-      linkedDok3Ids: z.array(z.number()).min(1).describe('IDs of DOK3 insights supporting this SPOV (must be graded, not pending)'),
-      primaryDok3Id: z.number().describe('ID of the primary DOK3 insight (must be in linkedDok3Ids)'),
+      text: z.string().min(1).max(MAX_ITEM_TEXT_LENGTH).describe('A single punchy, quotable line that takes a side. Not a paragraph, not a hedged take. The DOK1-2-3 chain is the justification; the SPOV itself does not explain itself.'),
+      linkedDok3Ids: z.array(idSchema).min(1).max(MAX_IDS_PER_CALL).describe('IDs of DOK3 insights supporting this SPOV (must be graded, not pending)'),
+      primaryDok3Id: idSchema.describe('ID of the primary DOK3 insight (must be in linkedDok3Ids)'),
     },
     async (args) => handleCreateDok4(args, env, props),
   );
