@@ -94,6 +94,19 @@ describe('tool registration through the MCP SDK', () => {
     expect(result.isError).toBe(true);
   });
 
+  it('accepts list_tasks week 6 (days 26-30 of a 30-workday plan) and refuses week 7', async () => {
+    const { tools } = await client.listTools();
+    const listTasks = tools.find((tool) => tool.name === 'list_tasks')!;
+    const week = (listTasks.inputSchema.properties as Record<string, { maximum?: number }>).week;
+    expect(week.maximum).toBe(6);
+
+    const result = await client.callTool({
+      name: 'list_tasks',
+      arguments: { brainliftSlug: 'my-brainlift', week: 7 },
+    });
+    expect(result.isError).toBe(true);
+  });
+
   it('rejects oversized markdown', async () => {
     const result = await client.callTool({
       name: 'grade_brainlift',

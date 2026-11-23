@@ -85,7 +85,7 @@ export function registerListTasks(server: McpServer, env: ToolEnv, props: ToolPr
     {
       brainliftSlug: slugSchema.optional().describe('Brainlift slug. Omit to list tasks across all brainlifts the student has access to.'),
       date: isoDateSchema.optional().describe('Filter by scheduled date (YYYY-MM-DD)'),
-      week: z.number().int().min(1).max(5).optional().describe('Filter by sprint week number (1-5). Only meaningful when brainliftSlug is provided.'),
+      week: z.number().int().min(1).max(6).optional().describe('Filter by plan week number (1-6). Weeks are 5 workdays, so a 30-workday plan has 6; these are not the 4 sprint stages. Only meaningful when brainliftSlug is provided.'),
       state: z.enum(['all', 'complete', 'incomplete']).optional().describe('Filter by completion state'),
       includePastDue: z.boolean().optional().describe('Include overdue incomplete tasks in results'),
       localDate: isoDateSchema.optional().describe('Local date (YYYY-MM-DD), required when includePastDue=true'),
