@@ -836,14 +836,37 @@ export class KeystoneClient {
     const response = await fetch(url, config);
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(
-        `Keystone API error: ${response.status} - ${errorText}`,
-      );
+      throw new Error(keystoneErrorMessage(response.status, await response.text()));
     }
 
     return response;
   }
+}
+
+const MAX_ERROR_DETAIL_LENGTH = 300;
+
+/**
+ * Build the error message tools return to the agent. Only the short
+ * `error`/`message` string from a JSON error body is included (truncated);
+ * anything else (HTML error pages, stack traces, large bodies) is dropped,
+ * because tool results end up in the agent transcript.
+ */
+export function keystoneErrorMessage(status: number, body: string): string {
+  const prefix = `Keystone API error: ${status}`;
+  let detail: unknown;
+  try {
+    const parsed = JSON.parse(body) as { error?: unknown; message?: unknown };
+    detail = parsed?.error ?? parsed?.message;
+  } catch {
+    return prefix;
+  }
+  if (typeof detail !== 'string' || !detail.trim()) return prefix;
+
+  const trimmed = detail.trim();
+  const shortened = trimmed.length > MAX_ERROR_DETAIL_LENGTH
+    ? `${trimmed.slice(0, MAX_ERROR_DETAIL_LENGTH)}...`
+    : trimmed;
+  return `${prefix} - ${shortened}`;
 }
 
 function toQueryParams(query: object): URLSearchParams {

@@ -273,10 +273,9 @@ app.get('/callback', async (c) => {
     },
   );
   if (!userResponse.ok) {
-    return callbackError(
-      `Failed to fetch user info: ${await userResponse.text()}`,
-      500,
-    );
+    // Log the status only; Google's error body is not shown to the user.
+    console.error(`Google userinfo request failed: ${userResponse.status}`);
+    return callbackError('Failed to fetch your Google profile. Please try again.', 500);
   }
 
   const { id, name, email, verified_email } = (await userResponse.json()) as {

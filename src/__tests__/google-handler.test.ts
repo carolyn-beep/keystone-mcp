@@ -298,6 +298,20 @@ describe('GET /callback: email verification and domain allow-list', () => {
     expect(await res.text()).toContain(`${REGISTERED_REDIRECT}?code=issued`);
   });
 
+  it('does not echo Google\'s userinfo error body to the browser', async () => {
+    mockFetch
+      .mockResolvedValueOnce(json({ access_token: 'g-access', token_type: 'Bearer', expires_in: 3600 }))
+      .mockResolvedValueOnce(new Response('{"error":{"message":"internal detail abc123"}}', { status: 401 }));
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    const state = await signedState('nonce-1');
+
+    const res = await callback({ state, code: 'auth-code' }, validCookie);
+
+    expect(res.status).toBe(500);
+    expect(await res.text()).not.toContain('abc123');
+    expect(completeAuthorization).not.toHaveBeenCalled();
+  });
+
   it('403s when verified_email is not true', async () => {
     mockGoogleSuccess({ id: 'g-123', name: 'Ada', email: 'ada@example.com', verified_email: false });
     const state = await signedState('nonce-1');
